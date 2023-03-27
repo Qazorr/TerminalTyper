@@ -13,6 +13,12 @@
 #define STATS_START_ROW 5
 #define STATS_START_COL 0
 
+#define INITIAL_COLOR "\033[0m"
+#define CORRECT_COLOR "\033[1;32m"
+#define FINISHED_COLOR "\033[1;34m"
+#define RESET "\033[0m"
+
+
 struct test_result
 {
     int64_t time;
@@ -70,14 +76,14 @@ private:
         std::string left, right;
         split_goal_to(left, right);
         terminal_jump_to(TEXT_START_ROW, TEXT_START_COL);
-        std::cout << "\r\033[1;32m" << left << "\033[0m" << right << "\n";
+        std::cout << "\r" << CORRECT_COLOR << left << INITIAL_COLOR << right << RESET << "\n";
         if (show_stats) this->display_stats();
     }
 
     void display_finish()
     {
         terminal_jump_to(TEXT_START_ROW, TEXT_START_COL);
-        std::cout << "\r\033[1;34m" << this->results.goal << "\033[0m" << std::endl;
+        std::cout << "\r" << FINISHED_COLOR << this->results.goal << RESET << std::endl;
         display_stats();
     }
 

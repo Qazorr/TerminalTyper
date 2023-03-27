@@ -24,7 +24,7 @@ char get_input()
 Typer::Typer(std::string goal)
 {
     results = {0, 0, 0, goal};
-};
+}
 
 void Typer::start_test(bool show_stats, bool allow_jump)
 {
