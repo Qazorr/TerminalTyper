@@ -8,8 +8,14 @@
 
 class Generator
 {
+private:
+    static std::vector<std::string> lines;
+    static bool initiated;
+
 public:
     Generator() = delete;
 
-    static std::string generate(uint32_t amount, std::string filepath="words.txt");
+    static void init(std::string filename = "words.txt");
+    static inline bool is_initiated() { return initiated; }
+    static std::string generate(uint32_t amount);
 };

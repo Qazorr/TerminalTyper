@@ -131,7 +131,7 @@ private:
         }
         else
         {
-            std::string new_goal = Generator::generate(this->no_words, this->words_filename);
+            std::string new_goal = Generator::generate(this->no_words);
             this->reset(std::move(new_goal));
         }
     }
@@ -142,4 +142,5 @@ public:
     void select_menu();
     void start_test(bool show_stats = false, bool allow_jump = true);
     void reset(std::string &&goal = "");
+    void run();
 };

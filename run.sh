@@ -7,7 +7,7 @@ EXE=main.x
 
 function compile() {
     echo "Compiling $ENTRY with $TYPER and $GENERATOR"
-    g++ $ENTRY $TYPER $GENERATOR -o $EXE
+    g++ $ENTRY $TYPER $GENERATOR -std=c++17 -o $EXE
 }
 
 function run() {

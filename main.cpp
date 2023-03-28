@@ -2,6 +2,6 @@
 
 int main()
 {
-    Typer app;
-    app.select_menu();
+    Typer app(20);
+    app.run();
 }

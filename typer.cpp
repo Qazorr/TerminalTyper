@@ -71,7 +71,8 @@ void switch_menu_item(int16_t move, uint16_t &current_row, const uint16_t lower_
 
 Typer::Typer(uint16_t default_no_words, std::string words_filename) : no_words(default_no_words), words_filename(words_filename)
 {
-    this->results = {0, 0, 0, Generator::generate(this->no_words, this->words_filename)};
+    Generator::init(words_filename);
+    this->results = {0, 0, 0, Generator::generate(this->no_words)};
 }
 
 void Typer::select_menu()
@@ -166,4 +167,9 @@ void Typer::reset(std::string &&goal)
     { // new goal
         this->results = {0, 0, 0, std::move(goal)};
     }
+}
+
+void Typer::run()
+{
+    this->select_menu();
 }
