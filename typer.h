@@ -1,5 +1,7 @@
 #pragma once
 
+#include "generator.h"
+
 #include <iostream>
 #include <unistd.h>
 #include <termios.h>
@@ -14,11 +16,15 @@
 #define STATS_START_ROW 5
 #define STATS_START_COL 0
 
+#define ENTER 10
+#define ARROW_UP 65
+#define ARROW_DOWN 66
+
 #define INITIAL_COLOR "\033[0m"
 #define CORRECT_COLOR "\033[1;32m"
 #define FINISHED_COLOR "\033[1;34m"
 #define STATS_COLOR "\033[1;36m"
-#define OPTION_PICKED_COLOR "\033[1;4;5;32m"
+#define OPTION_PICKED_COLOR "\033[1;4;6;32m"
 #define RESET "\033[0m"
 
 struct test_result
@@ -35,6 +41,8 @@ class Typer
 {
 private:
     test_result results;
+    uint16_t no_words;
+    std::string words_filename;
 
     template <
         class result_t = std::chrono::milliseconds,
@@ -106,9 +114,30 @@ private:
         exit(EXIT_SUCCESS);
     }
 
+    void ask_for_repeat(bool show_stats, bool allow_jump)
+    {
+        terminal_jump_to(10, 0);
+        char in;
+        std::cout << "Would you like to do the same text again? (Y/N)\r";
+        std::cout.flush();
+        do
+        {
+            in = tolower(get_input());
+        } while (in != 'y' && in != 'n');
+        if (in == 'y')
+        {
+            this->reset();
+            this->start_test(show_stats, allow_jump);
+        }
+        else
+        {
+            std::string new_goal = Generator::generate(this->no_words, this->words_filename);
+            this->reset(std::move(new_goal));
+        }
+    }
+
 public:
-    Typer() = delete;
-    Typer(std::string goal);
+    Typer(uint16_t default_no_words = 10, std::string words_filename = "words.txt");
 
     void select_menu();
     void start_test(bool show_stats = false, bool allow_jump = true);
