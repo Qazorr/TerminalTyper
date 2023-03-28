@@ -2,6 +2,6 @@
 
 int main()
 {
-    Typer typer("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla lacinia lacus a sapien euismod, quis.");
-    typer.start_test(true);
+    Typer typer("the of and a to in is you that it");
+    typer.select_menu();
 }

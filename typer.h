@@ -6,6 +6,7 @@
 #include <chrono>
 #include <iomanip>
 #include <math.h>
+#include <cctype>
 
 #define terminal_jump_to(row, col) printf("\033[%d;%dH", row, col);
 #define TEXT_START_ROW 0
@@ -16,8 +17,9 @@
 #define INITIAL_COLOR "\033[0m"
 #define CORRECT_COLOR "\033[1;32m"
 #define FINISHED_COLOR "\033[1;34m"
+#define STATS_COLOR "\033[1;36m"
+#define OPTION_PICKED_COLOR "\033[1;4;5;32m"
 #define RESET "\033[0m"
-
 
 struct test_result
 {
@@ -64,11 +66,12 @@ private:
     void display_stats()
     {
         terminal_jump_to(STATS_START_ROW, STATS_START_COL);
+        std::cout << STATS_COLOR;
         std::cout << '+' << std::string(25, '-') << '+' << std::endl;
         std::cout << '|' << std::setw(25) << "Accuracy: " + this->format(this->get_accuracy() * 100, 4) + "% " << '|' << std::endl;
         std::cout << '|' << std::setw(25) << "Elapsed = " + this->format(this->results.time / 1000.f, 4) + "s " << '|' << std::endl;
         std::cout << '|' << std::setw(25) << "WPM = " + this->format(this->get_WPM(), 4) + " " << '|' << std::endl;
-        std::cout << '+' << std::string(25, '-') << "+\n\n";
+        std::cout << '+' << std::string(25, '-') << RESET << "+\n\n";
     }
 
     void display_progress(bool show_stats = false)
@@ -77,7 +80,8 @@ private:
         split_goal_to(left, right);
         terminal_jump_to(TEXT_START_ROW, TEXT_START_COL);
         std::cout << "\r" << CORRECT_COLOR << left << INITIAL_COLOR << right << RESET << "\n";
-        if (show_stats) this->display_stats();
+        if (show_stats)
+            this->display_stats();
     }
 
     void display_finish()
@@ -87,10 +91,26 @@ private:
         display_stats();
     }
 
+    void restart()
+    {
+        system("clear");
+        terminal_jump_to(0, 0);
+        std::cout << "NOT IMPLEMENTED\n";
+        exit(EXIT_FAILURE);
+    }
+
+    void quit()
+    {
+        system("clear");
+        terminal_jump_to(0, 0);
+        exit(EXIT_SUCCESS);
+    }
+
 public:
     Typer() = delete;
     Typer(std::string goal);
 
+    void select_menu();
     void start_test(bool show_stats = false, bool allow_jump = true);
     void reset(std::string &&goal = "");
 };

@@ -1,5 +1,27 @@
 #include "typer.h"
 
+enum menu_item {
+    START, QUIT
+};
+
+std::string get_option_name(menu_item item)
+{
+    std::string option_name = ">>  <<", option;
+    switch(item)
+    {
+        case START:
+            option = "start";
+            break;
+        case QUIT:
+            option = "quit";
+            break;
+        default:
+            option = "bad option";
+            break;
+    }
+    return option_name.insert(3, option);
+}
+
 char get_input()
 {
     char buf = 0;
@@ -21,15 +43,82 @@ char get_input()
     return (buf);
 }
 
+int16_t handle_arrow_keys(char key)
+{
+    switch(key)
+    {
+        case 10: // ENTER KEY PRESSED
+            return -1;
+        case 65: // ARROW UP
+            return -2;
+        case 66: // ARROW DOWN
+            return 2;
+        default:
+            return 0;
+    }
+}
+
+void switch_menu_item(int16_t move, uint16_t& current_row, const uint16_t lower_boundary, const uint16_t upper_boundary)
+{
+    current_row += move;
+    if(current_row < lower_boundary) current_row = lower_boundary;
+    if(current_row > upper_boundary) current_row = upper_boundary;
+}
+
 Typer::Typer(std::string goal)
 {
     results = {0, 0, 0, goal};
+}
+
+void Typer::select_menu()
+{
+    std::string option_name;
+    const uint16_t row_begin = 4;
+    uint16_t current_row = row_begin;
+    int16_t move=0;
+    char key;
+
+    system("clear");
+    while(true)
+    {
+        terminal_jump_to(0, 0);
+        std::cout << "\033[1;34mUse arrow UP/DOWN to move around.\nPress ENTER to confirm\n" << RESET;
+        for(int i = 0; i<=QUIT; i++) {
+            terminal_jump_to(row_begin + i*2, 0);
+            menu_item item = static_cast<menu_item>(i);
+            option_name = current_row == row_begin + i*2 ? OPTION_PICKED_COLOR + get_option_name(item) + RESET : get_option_name(item);
+            std::cout << option_name << std::endl;
+        }
+        terminal_jump_to(current_row, 2);
+        std::cout.flush();
+        key = get_input();
+        move = handle_arrow_keys(key);
+        if(move == -1) { // ENTER PRESSED
+            switch((current_row - row_begin) / 2)
+            {
+                case START:
+                    this->start_test(true);
+                    break;
+                case QUIT:
+                    this->quit();
+                    break;
+                default:
+                    break;
+            }
+            system("clear");
+        } else {
+            switch_menu_item(move, current_row, row_begin, row_begin + QUIT*2);
+        }
+    }
 }
 
 void Typer::start_test(bool show_stats, bool allow_jump)
 {
     char in;
     auto begin = std::chrono::steady_clock::now();
+    std::string debug = "";
+    bool started = false;
+
     system("clear");
     while (this->results.user_score != this->results.goal.length())
     {
@@ -40,24 +129,38 @@ void Typer::start_test(bool show_stats, bool allow_jump)
             std::cout.flush();
         }
         in = get_input();
-        if (in == this->results.goal.at(this->results.user_score))
+        if(!started) {
+            started = true;
+            begin = std::chrono::steady_clock::now();
+        }
+        if (in == this->results.goal.at(this->results.user_score)) 
             (this->results.user_score)++;
+        debug += in;
         (this->results.input_count)++;
     }
     this->results.time = since(begin).count();
     this->display_finish();
+    terminal_jump_to(10, 0);
+    std::cout << "Would you like to do the same text again? (Y/N)\r";
+    std::cout.flush();
+    do {
+        in = tolower(get_input());
+    } while(in != 'y' && in != 'n');
+    if(in == 'y') {
+        this->reset();
+        this->start_test(show_stats, allow_jump);
+    } else {
+        // regenerate but for now exit the typer
+        exit(EXIT_SUCCESS);
+    }
 }
 
 void Typer::reset(std::string&& goal)
 {
-    // perform reset (the same goal from beginning)
-    if(goal == "") {
+    system("clear");
+    if(goal == "") { // same goal as previously
         this->results = {0, 0, 0, this->results.goal};
-    } else {
+    } else { // new goal
         this->results = {0, 0, 0, std::move(goal)};
     }
-    terminal_jump_to(10, 0);
-    std::cout << "\nWaiting for key press...\r";
-    std::cout.flush();
-    get_input();
 }
