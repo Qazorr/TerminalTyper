@@ -429,7 +429,7 @@ void Typer::change_words_filename()
                   << "Use arrow UP/DOWN to move around.\n"
                   << "Press ENTER to choose file\n"
                   << RESET;
-        for (int i = 0; i < files.size(); i++)
+        for (uint32_t i = 0; i < files.size(); i++)
         {
             terminal_jump_to(row_begin + i * row_separate, 0);
             option_name = current_row == row_begin + i * row_separate ? OPTION_PICKED_COLOR + element_before_option + files.at(i) + RESET

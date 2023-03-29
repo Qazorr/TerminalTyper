@@ -11,7 +11,7 @@ std::string Generator::generate(uint32_t amount)
     std::shuffle(lines.begin(), lines.end(), g);
 
     std::stringstream ss;
-    for (int i = 0; i < amount; ++i)
+    for (uint32_t i = 0; i < amount; ++i)
     {
         ss << lines[i] << " ";
     }
