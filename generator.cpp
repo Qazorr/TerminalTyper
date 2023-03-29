@@ -1,27 +1,28 @@
 #include "generator.h"
 
 bool Generator::initiated = false;
-std::vector<std::string> Generator::lines{};
+std::vector<std::string> Generator::lines;
 
 std::string Generator::generate(uint32_t amount)
 {
-    if (!is_initiated())
-        return std::string();
+    if (!initiated) return std::string();
     std::random_device rd;
     std::mt19937 g(rd());
     std::shuffle(lines.begin(), lines.end(), g);
 
-    std::string output = "";
+    std::stringstream ss;
     for (int i = 0; i < amount; ++i)
-        output += lines[i] + " ";
+    {
+        ss << lines[i] << " ";
+    }
+    std::string output = ss.str();
 
     return output.substr(0, output.length() - 1);
 }
 
 void Generator::init(std::string filename)
 {
-    if (is_initiated())
-        return;
+    if (initiated) return;
     std::ifstream file(filename);
     if (!file)
     {

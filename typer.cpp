@@ -3,7 +3,10 @@
 enum menu_item
 {
     START,
-    QUIT
+    OPTIONS,
+    QUIT,
+    MENU_FIRST = START,
+    MENU_LAST = QUIT
 };
 
 std::string get_option_name(menu_item item)
@@ -14,6 +17,9 @@ std::string get_option_name(menu_item item)
     case START:
         option = "start";
         break;
+    case OPTIONS:
+        option = "options";
+        break;
     case QUIT:
         option = "quit";
         break;
@@ -22,6 +28,40 @@ std::string get_option_name(menu_item item)
         break;
     }
     return option_name.insert(3, option);
+}
+
+enum settings_item
+{
+    WORDS,
+    FILENAME,
+    SAVE,
+    EXIT,
+    SETTINGS_FIRST = WORDS,
+    SETTINGS_LAST = EXIT
+};
+
+std::string get_settings_name(settings_item item)
+{
+    std::string option_name = ">  <", option;
+    switch (item)
+    {
+    case WORDS:
+        option = "number of words";
+        break;
+    case FILENAME:
+        option = "filename";
+        break;
+    case SAVE:
+        option = "save";
+        break;
+    case EXIT:
+        option = "exit";
+        break;
+    default:
+        option = "bad option";
+        break;
+    }
+    return option_name.insert(2, option);
 }
 
 char get_input()
@@ -45,16 +85,25 @@ char get_input()
     return (buf);
 }
 
+bool yes_no_question(std::string question)
+{
+    char in;
+    std::cout << question << " (Y/N)\r";
+    std::cout.flush();
+    do
+        in = tolower(get_input());
+    while (in != 'y' && in != 'n');
+    return in == 'y';
+}
+
 int16_t handle_arrow_keys(char key)
 {
     switch (key)
     {
-    case ENTER:
-        return -1;
     case ARROW_UP:
-        return -2;
+        return -1;
     case ARROW_DOWN:
-        return 2;
+        return 1;
     default:
         return 0;
     }
@@ -63,22 +112,21 @@ int16_t handle_arrow_keys(char key)
 void switch_menu_item(int16_t move, uint16_t &current_row, const uint16_t lower_boundary, const uint16_t upper_boundary)
 {
     current_row += move;
-    if (current_row < lower_boundary)
-        current_row = lower_boundary;
-    if (current_row > upper_boundary)
-        current_row = upper_boundary;
+    current_row = current_row < lower_boundary ? lower_boundary : current_row;
+    current_row = current_row > upper_boundary ? upper_boundary : current_row;
 }
 
-Typer::Typer(uint16_t default_no_words, std::string words_filename) : no_words(default_no_words), words_filename(words_filename)
+Typer::Typer(std::string config_filename) : config_filename(config_filename)
 {
-    Generator::init(words_filename);
-    this->results = {0, 0, 0, Generator::generate(this->no_words)};
+    this->load_settings(this->config_filename);
+    Generator::init(this->settings["words_filename"]);
+    this->results = {0, 0, 0, Generator::generate(std::stoi(this->settings["no_words"]))};
 }
 
 void Typer::select_menu()
 {
     std::string option_name;
-    const uint16_t row_begin = 5;
+    const uint16_t row_begin = 5, row_separate = 2;
     uint16_t current_row = row_begin;
     int16_t move = 0;
     char key;
@@ -87,29 +135,40 @@ void Typer::select_menu()
     while (true)
     {
         terminal_jump_to(0, 0);
-        std::cout << "\033[1;34mWelcome to TerminalTyper!\nUse arrow UP/DOWN to move around.\nPress ENTER to confirm\n"
+        std::cout << "\033[1;34mWelcome to TerminalTyper!\n"
+                  << "Use arrow UP/DOWN to move around.\n"
+                  << "Press ENTER to confirm\n"
                   << RESET;
-        for (int i = 0; i <= QUIT; i++)
+        for (int i = MENU_FIRST; i <= MENU_LAST; i++)
         {
-            terminal_jump_to(row_begin + i * 2, 0);
+            terminal_jump_to(row_begin + i * row_separate, 0);
             menu_item item = static_cast<menu_item>(i);
-            option_name = current_row == row_begin + i * 2 ? OPTION_PICKED_COLOR + get_option_name(item) + RESET : get_option_name(item);
+            option_name = current_row == row_begin + i * row_separate ? OPTION_PICKED_COLOR + get_option_name(item) + RESET : get_option_name(item);
             std::cout << option_name << std::endl;
         }
         terminal_jump_to(current_row, 2);
         std::cout.flush();
         key = get_input();
-        move = handle_arrow_keys(key);
-        if (move == -1)
-        { // ENTER PRESSED
-            switch ((current_row - row_begin) / 2)
+        move = handle_arrow_keys(key) * row_separate;
+        if (key == ENTER)
+        {
+            switch ((current_row - row_begin) / row_separate)
             {
             case START:
+                this->reset(Generator::generate(std::stoi(this->settings["no_words"])));
                 this->start_test(true);
                 break;
-            case QUIT:
-                this->quit();
+            case OPTIONS:
+                this->change_options();
                 break;
+            case QUIT:
+                if (this->settings_changed)
+                {
+                    terminal_jump_to(row_begin + (MENU_LAST + 1) * row_separate, 0);
+                    if (yes_no_question("You have unsaved changes to your configuration, would u like to save?"))
+                        this->save_settings(this->config_filename);
+                }
+                this->quit();
             default:
                 break;
             }
@@ -117,7 +176,7 @@ void Typer::select_menu()
         }
         else
         {
-            switch_menu_item(move, current_row, row_begin, row_begin + QUIT * 2);
+            switch_menu_item(move, current_row, row_begin, row_begin + MENU_LAST * row_separate);
         }
     }
 }
@@ -153,20 +212,100 @@ void Typer::start_test(bool show_stats, bool allow_jump)
     }
     this->results.time = since(begin).count();
     this->display_finish();
-    this->ask_for_repeat(show_stats, allow_jump);
+    terminal_jump_to(10, 0);
+    if (yes_no_question("Would you like to do the same text again?"))
+    {
+        this->reset();
+        this->start_test(show_stats, allow_jump);
+    }
 }
 
 void Typer::reset(std::string &&goal)
 {
-    system("clear");
-    if (goal == "")
-    { // same goal as previously
+    if (goal == "") // same goal as previously
         this->results = {0, 0, 0, this->results.goal};
-    }
-    else
-    { // new goal
+    else // new goal
         this->results = {0, 0, 0, std::move(goal)};
+}
+
+void Typer::change_options()
+{
+    std::string option_name;
+    const uint16_t row_begin = 5, row_separate = 2;
+    uint16_t current_row = row_begin;
+    int16_t move = 0;
+    char key;
+
+    system("clear");
+    while (true)
+    {
+        terminal_jump_to(0, 0);
+        std::cout << "\033[1;34mWelcome to TerminalTyper options menu!\n"
+                  << "Use arrow UP/DOWN to move around.\n"
+                  << "Press ENTER to choose option to change the option\n"
+                  << RESET;
+        for (int i = SETTINGS_FIRST; i <= SETTINGS_LAST; i++)
+        {
+            terminal_jump_to(row_begin + i * row_separate, 0);
+            settings_item item = static_cast<settings_item>(i);
+            option_name = current_row == row_begin + i * row_separate ? OPTION_PICKED_COLOR + get_settings_name(item) + RESET : get_settings_name(item);
+            std::cout << option_name << std::endl;
+        }
+        terminal_jump_to(current_row, 2);
+        std::cout.flush();
+        key = get_input();
+        move = handle_arrow_keys(key) * row_separate;
+        if (key == ENTER)
+        {
+            switch ((current_row - row_begin) / row_separate)
+            {
+            case WORDS:
+                this->change_words_amount();
+                break;
+            case FILENAME:
+                this->change_words_filename();
+                break;
+            case SAVE:
+                this->save_settings(this->config_filename);
+            case EXIT:
+                if (this->settings_changed)
+                {
+                    terminal_jump_to(row_begin + (SETTINGS_LAST + 1) * row_separate, 0);
+                    if (yes_no_question("You have unsaved changes to your configuration, would u like to save?"))
+                        this->save_settings(this->config_filename);
+                }
+                return;
+            default:
+                break;
+            }
+            system("clear");
+        }
+        else
+        {
+            switch_menu_item(move, current_row, row_begin, row_begin + SETTINGS_LAST * row_separate);
+        }
     }
+}
+
+void Typer::change_words_amount()
+{
+    this->settings["no_words"] = "10";
+    this->settings_changed = true;
+}
+
+void Typer::change_words_filename()
+{
+    terminal_jump_to(0, 0);
+    std::cout << "\033[1;34mChange words input filename.\n"
+              << "Remember the file must contain 1 word per line\n"
+              << RESET;
+
+    terminal_jump_to(5, 0);
+    std::string filename;
+    std::cout << "Enter full filename with extension: ";
+    std::cin >> filename;
+    this->settings["words_filename"] = filename;
+    this->settings_changed = true;
 }
 
 void Typer::run()

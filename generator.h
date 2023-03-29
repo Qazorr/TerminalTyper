@@ -5,6 +5,7 @@
 #include <random>
 #include <fstream>
 #include <algorithm>
+#include <sstream>
 
 class Generator
 {
@@ -16,6 +17,5 @@ public:
     Generator() = delete;
 
     static void init(std::string filename = "words.txt");
-    static inline bool is_initiated() { return initiated; }
     static std::string generate(uint32_t amount);
 };

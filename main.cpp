@@ -2,6 +2,6 @@
 
 int main()
 {
-    Typer app(20);
+    Typer app;
     app.run();
 }

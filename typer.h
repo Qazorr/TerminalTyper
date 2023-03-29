@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <math.h>
 #include <cctype>
+#include <map>
 
 #define terminal_jump_to(row, col) printf("\033[%d;%dH", row, col);
 #define TEXT_START_ROW 0
@@ -27,6 +28,8 @@
 #define OPTION_PICKED_COLOR "\033[1;4;6;32m"
 #define RESET "\033[0m"
 
+#define DEFAULT_CONFIG_FILENAME "config.txt"
+
 struct test_result
 {
     int64_t time;
@@ -36,13 +39,14 @@ struct test_result
 };
 
 char get_input();
-
+bool yes_no_question(std::string question);
 class Typer
 {
 private:
     test_result results;
-    uint16_t no_words;
-    std::string words_filename;
+    std::string config_filename;
+    std::map<std::string, std::string> settings;
+    bool settings_changed = false;
 
     template <
         class result_t = std::chrono::milliseconds,
@@ -114,33 +118,46 @@ private:
         exit(EXIT_SUCCESS);
     }
 
-    void ask_for_repeat(bool show_stats, bool allow_jump)
+    void load_settings(std::string config_filename)
     {
-        terminal_jump_to(10, 0);
-        char in;
-        std::cout << "Would you like to do the same text again? (Y/N)\r";
-        std::cout.flush();
-        do
+        std::ifstream infile(config_filename);
+        if (infile.is_open())
         {
-            in = tolower(get_input());
-        } while (in != 'y' && in != 'n');
-        if (in == 'y')
-        {
-            this->reset();
-            this->start_test(show_stats, allow_jump);
+            std::string line, name, value;
+            while (std::getline(infile, line))
+            {
+                std::size_t pos = line.find('=');
+                std::string name = line.substr(0, pos), value = line.substr(pos + 1);
+
+                settings[name] = value;
+            }
+            infile.close();
         }
         else
-        {
-            std::string new_goal = Generator::generate(this->no_words);
-            this->reset(std::move(new_goal));
+            save_settings(config_filename, true);
+    }
+
+    void save_settings(std::string config_filename, bool default_settings = false)
+    {
+        if(default_settings) {
+            this->settings["no_words"] = "10";
+            this->settings["words_filename"] = "words.txt";
         }
+        std::ofstream outfile(config_filename);
+        for (auto const &[name, value] : settings)
+            outfile << name << "=" << value << std::endl;
+        outfile.close();
+        this->settings_changed = false;
     }
 
 public:
-    Typer(uint16_t default_no_words = 10, std::string words_filename = "words.txt");
+    Typer(std::string config_filename = DEFAULT_CONFIG_FILENAME);
 
     void select_menu();
     void start_test(bool show_stats = false, bool allow_jump = true);
     void reset(std::string &&goal = "");
+    void change_options();
+    void change_words_amount();
+    void change_words_filename();
     void run();
 };
