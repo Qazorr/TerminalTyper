@@ -143,7 +143,8 @@ void Typer::select_menu()
         {
             terminal_jump_to(row_begin + i * row_separate, 0);
             menu_item item = static_cast<menu_item>(i);
-            option_name = current_row == row_begin + i * row_separate ? OPTION_PICKED_COLOR + get_option_name(item) + RESET : get_option_name(item);
+            option_name = current_row == row_begin + i * row_separate ? OPTION_PICKED_COLOR + get_option_name(item) + RESET
+                                                                      : get_option_name(item);
             std::cout << option_name << std::endl;
         }
         terminal_jump_to(current_row, 2);
@@ -242,13 +243,14 @@ void Typer::change_options()
         terminal_jump_to(0, 0);
         std::cout << "\033[1;34mWelcome to TerminalTyper options menu!\n"
                   << "Use arrow UP/DOWN to move around.\n"
-                  << "Press ENTER to choose option to change the option\n"
+                  << "Press ENTER to choose\n"
                   << RESET;
         for (int i = SETTINGS_FIRST; i <= SETTINGS_LAST; i++)
         {
             terminal_jump_to(row_begin + i * row_separate, 0);
             settings_item item = static_cast<settings_item>(i);
-            option_name = current_row == row_begin + i * row_separate ? OPTION_PICKED_COLOR + get_settings_name(item) + RESET : get_settings_name(item);
+            option_name = current_row == row_begin + i * row_separate ? OPTION_PICKED_COLOR + get_settings_name(item) + RESET
+                                                                      : get_settings_name(item);
             std::cout << option_name << std::endl;
         }
         terminal_jump_to(current_row, 2);
@@ -289,12 +291,47 @@ void Typer::change_options()
 
 void Typer::change_words_amount()
 {
-    this->settings["no_words"] = "10";
-    this->settings_changed = true;
+    std::string option_name;
+    const uint16_t row_begin = 5, row_separate = 1;
+    const uint16_t no_options = 10, value_jump = 10;
+    const std::string element_before_option = "-> ";
+    uint16_t current_row = row_begin;
+    int16_t move = 0;
+    char key;
+
+    system("clear");
+    while (true)
+    {
+        terminal_jump_to(0, 0);
+        std::cout << "\033[1;34mChange amount of words displayed for you to type\n"
+                  << "Use arrow UP/DOWN to move around.\n"
+                  << "Press ENTER to choose words amount\n"
+                  << RESET;
+        for (int i = 0; i < no_options; i++)
+        {
+            terminal_jump_to(row_begin + i * row_separate, 0);
+            option_name = current_row == row_begin + i * row_separate ? OPTION_PICKED_COLOR + element_before_option + std::to_string((i + 1) * value_jump) + RESET
+                                                                      : element_before_option + std::to_string((i + 1) * value_jump);
+            std::cout << option_name << std::endl;
+        }
+        terminal_jump_to(current_row, 2);
+        std::cout.flush();
+        key = get_input();
+        move = handle_arrow_keys(key) * row_separate;
+        if (key == ENTER)
+        {
+            this->settings["no_words"] = std::to_string(value_jump * (((current_row - row_begin) / row_separate) + 1));
+            this->settings_changed = true;
+            return;
+        }
+        else
+            switch_menu_item(move, current_row, row_begin, row_begin + (no_options - 1) * row_separate);
+    }
 }
 
 void Typer::change_words_filename()
 {
+    system("clear");
     terminal_jump_to(0, 0);
     std::cout << "\033[1;34mChange words input filename.\n"
               << "Remember the file must contain 1 word per line\n"
