@@ -144,7 +144,7 @@ void switch_menu_item(int16_t move, uint16_t &current_row, const uint16_t lower_
 void Typer::change_switch_option(std::string option)
 {
     std::string option_name;
-    const uint16_t row_begin = 5, col_begin = 5, col_separate = 5;
+    const uint16_t row_begin = 6, col_begin = 5, col_separate = 5;
     uint16_t current_col = col_begin;
     int16_t move = 0;
     std::string options[]{"ON", "OFF"};
@@ -157,6 +157,7 @@ void Typer::change_switch_option(std::string option)
         std::cout << "\033[1;34mChange " << option << " value.\n"
                   << "Use arrow LEFT/RIGHT to move around.\n"
                   << "Press ENTER to choose a value\n"
+                  << "Press 'q' to cancel\n"
                   << RESET;
         for (int i = 0; i < 2; i++)
         {
@@ -176,6 +177,8 @@ void Typer::change_switch_option(std::string option)
             this->settings_changed = true;
             return;
         }
+        else if (key == GO_BACK_SHORTCUT)
+            return;
         else
             switch_menu_item(move, current_col, col_begin, col_begin + 1 * col_separate);
     }
@@ -191,7 +194,7 @@ Typer::Typer(std::string config_filename) : config_filename(config_filename)
 void Typer::select_menu()
 {
     std::string option_name;
-    const uint16_t row_begin = 5, row_separate = 2;
+    const uint16_t row_begin = 6, row_separate = 2;
     uint16_t current_row = row_begin;
     int16_t move = 0;
     char key;
@@ -201,8 +204,9 @@ void Typer::select_menu()
     {
         terminal_jump_to(0, 0);
         std::cout << "\033[1;34mWelcome to TerminalTyper!\n"
-                  << "Use arrow UP/DOWN to move around.\n"
-                  << "Press ENTER to confirm\n"
+                  << "Use arrow 'UP'/'DOWN' to move around.\n"
+                  << "Press 'ENTER' to confirm.\n"
+                  << "You can press 'q' to quit and 'ESC' to interrupt the already begun test.\n"
                   << RESET;
         for (int i = MENU_FIRST; i <= MENU_LAST; i++)
         {
@@ -240,10 +244,18 @@ void Typer::select_menu()
             }
             system("clear");
         }
-        else
+        else if (key == GO_BACK_SHORTCUT)
         {
-            switch_menu_item(move, current_row, row_begin, row_begin + MENU_LAST * row_separate);
+            if (this->settings_changed)
+            {
+                terminal_jump_to(row_begin + (MENU_LAST + 1) * row_separate, 0);
+                if (yes_no_question("You have unsaved changes to your configuration, would u like to save?"))
+                    this->save_settings(this->config_filename);
+            }
+            this->quit();
         }
+        else
+            switch_menu_item(move, current_row, row_begin, row_begin + MENU_LAST * row_separate);
     }
 }
 
@@ -266,6 +278,8 @@ void Typer::start_test()
             std::cout.flush();
         }
         in = get_input();
+        if (in == ESCAPE)
+            break;
         if (!started)
         {
             started = true;
@@ -297,7 +311,7 @@ void Typer::reset(std::string &&goal)
 void Typer::change_settings()
 {
     std::string option_name;
-    const uint16_t row_begin = 5, row_separate = 1;
+    const uint16_t row_begin = 6, row_separate = 1;
     uint16_t current_row = row_begin;
     int16_t move = 0;
     char key;
@@ -307,8 +321,9 @@ void Typer::change_settings()
     {
         terminal_jump_to(0, 0);
         std::cout << "\033[1;34mWelcome to TerminalTyper options menu!\n"
-                  << "Use arrow UP/DOWN to move around.\n"
-                  << "Press ENTER to choose\n"
+                  << "Use arrow 'UP'/'DOWN' to move around.\n"
+                  << "Press 'ENTER' to choose\n"
+                  << "You can press 'q' to go back.\n"
                   << RESET;
         for (int i = SETTINGS_FIRST; i <= SETTINGS_LAST; i++)
         {
@@ -356,6 +371,16 @@ void Typer::change_settings()
             }
             system("clear");
         }
+        else if (key == GO_BACK_SHORTCUT)
+        {
+            if (this->settings_changed)
+            {
+                terminal_jump_to(row_begin + (SETTINGS_LAST + 1) * row_separate, 0);
+                if (yes_no_question("You have unsaved changes to your configuration, would u like to save?"))
+                    this->save_settings(this->config_filename);
+            }
+            return;
+        }
         else
         {
             switch_menu_item(move, current_row, row_begin, row_begin + SETTINGS_LAST * row_separate);
@@ -366,7 +391,7 @@ void Typer::change_settings()
 void Typer::change_words_amount()
 {
     std::string option_name;
-    const uint16_t row_begin = 5, row_separate = 1;
+    const uint16_t row_begin = 6, row_separate = 1;
     const uint16_t no_options = 10, value_jump = 10;
     const std::string element_before_option = "-> ";
     uint16_t current_row = row_begin;
@@ -380,6 +405,7 @@ void Typer::change_words_amount()
         std::cout << "\033[1;34mChange amount of words displayed for you to type\n"
                   << "Use arrow UP/DOWN to move around.\n"
                   << "Press ENTER to choose words amount\n"
+                  << "Press 'q' to cancel\n"
                   << RESET;
         for (int i = 0; i < no_options; i++)
         {
@@ -398,6 +424,8 @@ void Typer::change_words_amount()
             this->settings_changed = true;
             return;
         }
+        else if (key == GO_BACK_SHORTCUT)
+            return;
         else
             switch_menu_item(move, current_row, row_begin, row_begin + (no_options - 1) * row_separate);
     }
@@ -410,7 +438,7 @@ void Typer::change_words_filename()
         std::cout << entry.path().filename() << std::endl;
 
     std::string option_name;
-    const uint16_t row_begin = 5, row_separate = 1;
+    const uint16_t row_begin = 6, row_separate = 1;
     const std::string element_before_option = "-> ";
     uint16_t current_row = row_begin;
     int16_t move = 0;
@@ -428,6 +456,7 @@ void Typer::change_words_filename()
         std::cout << "\033[1;34mChange words input filename (from txt/ directory).\n"
                   << "Use arrow UP/DOWN to move around.\n"
                   << "Press ENTER to choose file\n"
+                  << "Press 'q' to cancel\n"
                   << RESET;
         for (uint32_t i = 0; i < files.size(); i++)
         {
@@ -448,6 +477,8 @@ void Typer::change_words_filename()
             Generator::change_file(this->settings["words_filename"]);
             return;
         }
+        else if (key == GO_BACK_SHORTCUT)
+            return;
         else
             switch_menu_item(move, current_row, row_begin, row_begin + (files.size() - 1) * row_separate);
     }

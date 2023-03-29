@@ -18,7 +18,10 @@
 #define STATS_START_ROW 5
 #define STATS_START_COL 0
 
+#define GO_BACK_SHORTCUT 113 // q
+
 #define ENTER 10
+#define ESCAPE 27
 #define ARROW_UP 65
 #define ARROW_DOWN 66
 #define ARROW_RIGHT 67
