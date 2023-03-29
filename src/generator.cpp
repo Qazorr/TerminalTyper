@@ -20,10 +20,10 @@ std::string Generator::generate(uint32_t amount)
     return output.substr(0, output.length() - 1);
 }
 
-void Generator::init(std::string filename)
+void Generator::init(std::string filepath)
 {
     if (initiated) return;
-    std::ifstream file(filename);
+    std::ifstream file(filepath);
     if (!file)
     {
         std::cerr << "Unable to open file\n";
@@ -33,6 +33,22 @@ void Generator::init(std::string filename)
     std::string line;
     while (std::getline(file, line))
         lines.push_back(line);
-    std::cout << lines.size() << std::endl;
+    initiated = true;
+}
+
+void Generator::change_file(std::string filepath)
+{
+    initiated = false;
+    std::ifstream file(filepath);
+    if (!file)
+    {
+        std::cerr << "Unable to open file\n";
+        return;
+    }
+
+    lines.clear();
+    std::string line;
+    while (std::getline(file, line))
+        lines.push_back(line);
     initiated = true;
 }

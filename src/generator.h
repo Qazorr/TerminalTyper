@@ -16,6 +16,7 @@ private:
 public:
     Generator() = delete;
 
-    static void init(std::string filename = "words.txt");
+    static void init(std::string filepath = "txt/words.txt");
+    static void change_file(std::string filepath);
     static std::string generate(uint32_t amount);
 };

@@ -10,6 +10,7 @@
 #include <math.h>
 #include <cctype>
 #include <map>
+#include <filesystem>
 
 #define terminal_jump_to(row, col) printf("\033[%d;%dH", row, col);
 #define TEXT_START_ROW 0
@@ -20,6 +21,8 @@
 #define ENTER 10
 #define ARROW_UP 65
 #define ARROW_DOWN 66
+#define ARROW_RIGHT 67
+#define ARROW_LEFT 68
 
 #define INITIAL_COLOR "\033[0m"
 #define CORRECT_COLOR "\033[1;32m"
@@ -40,6 +43,9 @@ struct test_result
 
 char get_input();
 bool yes_no_question(std::string question);
+int16_t handle_up_down_arrow_key(char key);
+int16_t handle_left_right_arrow_key(char key);
+
 class Typer
 {
 private:
@@ -86,13 +92,13 @@ private:
         std::cout << '+' << std::string(25, '-') << RESET << "+\n\n";
     }
 
-    void display_progress(bool show_stats = false)
+    void display_progress()
     {
         std::string left, right;
         split_goal_to(left, right);
         terminal_jump_to(TEXT_START_ROW, TEXT_START_COL);
         std::cout << "\r" << CORRECT_COLOR << left << INITIAL_COLOR << right << RESET << "\n";
-        if (show_stats)
+        if (this->settings["show_stats"] == "1")
             this->display_stats();
     }
 
@@ -103,19 +109,20 @@ private:
         display_stats();
     }
 
-    void restart()
-    {
-        system("clear");
-        terminal_jump_to(0, 0);
-        std::cout << "NOT IMPLEMENTED\n";
-        exit(EXIT_FAILURE);
-    }
-
     void quit()
     {
         system("clear");
         terminal_jump_to(0, 0);
         exit(EXIT_SUCCESS);
+    }
+
+    void load_default_settings()
+    {
+        this->settings = {
+            {"no_words", "10"},
+            {"words_filename", "txt/words.txt"},
+            {"trailing_cursor", "1"},
+            {"show_stats", "1"}};
     }
 
     void load_settings(std::string config_filename)
@@ -139,10 +146,8 @@ private:
 
     void save_settings(std::string config_filename, bool default_settings = false)
     {
-        if(default_settings) {
-            this->settings["no_words"] = "10";
-            this->settings["words_filename"] = "words.txt";
-        }
+        if (default_settings)
+            this->load_default_settings();
         std::ofstream outfile(config_filename);
         for (auto const &[name, value] : settings)
             outfile << name << "=" << value << std::endl;
@@ -150,13 +155,15 @@ private:
         this->settings_changed = false;
     }
 
+    void change_switch_option(std::string option);
+
 public:
     Typer(std::string config_filename = DEFAULT_CONFIG_FILENAME);
 
     void select_menu();
-    void start_test(bool show_stats = false, bool allow_jump = true);
+    void start_test();
     void reset(std::string &&goal = "");
-    void change_options();
+    void change_settings();
     void change_words_amount();
     void change_words_filename();
     void run();
