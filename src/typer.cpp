@@ -32,6 +32,7 @@ std::string get_option_name(menu_item item)
 
 enum settings_item
 {
+    MODE,
     WORDS,
     FILENAME,
     TRAILING_CURSOR,
@@ -39,7 +40,7 @@ enum settings_item
     RESTORE_DEFAULT,
     SAVE,
     EXIT,
-    SETTINGS_FIRST = WORDS,
+    SETTINGS_FIRST = MODE,
     SETTINGS_LAST = EXIT
 };
 
@@ -48,6 +49,9 @@ std::string get_settings_name(settings_item item)
     std::string option_name = ">  <", option;
     switch (item)
     {
+    case MODE:
+        option = "typer mode";
+        break;
     case WORDS:
         option = "number of words";
         break;
@@ -134,59 +138,18 @@ int16_t handle_left_right_arrow_key(char key)
     }
 }
 
-void switch_menu_item(int16_t move, uint16_t &current_row, const uint16_t lower_boundary, const uint16_t upper_boundary)
+void switch_menu_item(int16_t move, uint16_t &current_pos, const uint16_t lower_boundary, const uint16_t upper_boundary)
 {
-    current_row += move;
-    current_row = current_row < lower_boundary ? lower_boundary : current_row;
-    current_row = current_row > upper_boundary ? upper_boundary : current_row;
+    current_pos += move;
+    current_pos = current_pos < lower_boundary ? lower_boundary : current_pos;
+    current_pos = current_pos > upper_boundary ? upper_boundary : current_pos;
 }
 
-void Typer::change_switch_option(std::string option)
-{
-    std::string option_name;
-    const uint16_t row_begin = 6, col_begin = 5, col_separate = 5;
-    uint16_t current_col = col_begin;
-    int16_t move = 0;
-    std::string options[]{"ON", "OFF"};
-    char key;
-
-    system("clear");
-    while (true)
-    {
-        terminal_jump_to(0, 0);
-        std::cout << "\033[1;34mChange " << option << " value.\n"
-                  << "Use arrow LEFT/RIGHT to move around.\n"
-                  << "Press ENTER to choose a value\n"
-                  << "Press 'q' to cancel\n"
-                  << RESET;
-        for (int i = 0; i < 2; i++)
-        {
-            terminal_jump_to(row_begin, col_begin + i * col_separate);
-            option_name = current_col == col_begin + i * col_separate ? OPTION_PICKED_COLOR + options[i] + RESET
-                                                                      : options[i];
-            std::cout << option_name;
-        }
-        terminal_jump_to(row_begin, current_col);
-        std::cout.flush();
-        key = get_input();
-        move = handle_left_right_arrow_key(key) * col_separate;
-        if (key == ENTER)
-        {
-            std::string option_value = options[((current_col - col_begin) / col_separate)] == "ON" ? "1" : "0";
-            this->settings[option] = option_value;
-            this->settings_changed = true;
-            return;
-        }
-        else if (key == GO_BACK_SHORTCUT)
-            return;
-        else
-            switch_menu_item(move, current_col, col_begin, col_begin + 1 * col_separate);
-    }
-}
+Typer::Typer() : Typer(DEFAULT_CONFIG_FILENAME) {}
 
 Typer::Typer(std::string config_filename) : config_filename(config_filename)
 {
-    this->load_settings(this->config_filename);
+    this->load_settings();
     Generator::init(this->settings["words_filename"]);
     this->results = {0, 0, 0, Generator::generate(std::stoi(this->settings["no_words"]))};
 }
@@ -236,7 +199,7 @@ void Typer::select_menu()
                 {
                     terminal_jump_to(row_begin + (MENU_LAST + 1) * row_separate, 0);
                     if (yes_no_question("You have unsaved changes to your configuration, would u like to save?"))
-                        this->save_settings(this->config_filename);
+                        this->save_settings();
                 }
                 this->quit();
             default:
@@ -250,7 +213,7 @@ void Typer::select_menu()
             {
                 terminal_jump_to(row_begin + (MENU_LAST + 1) * row_separate, 0);
                 if (yes_no_question("You have unsaved changes to your configuration, would u like to save?"))
-                    this->save_settings(this->config_filename);
+                    this->save_settings();
             }
             this->quit();
         }
@@ -292,7 +255,7 @@ void Typer::start_test()
     }
     this->results.time = since(begin).count();
     this->display_finish();
-    terminal_jump_to(10, 0);
+    terminal_jump_to(12, 0);
     if (yes_no_question("Would you like to do the same text again?"))
     {
         this->reset();
@@ -341,6 +304,9 @@ void Typer::change_settings()
         {
             switch ((current_row - row_begin) / row_separate)
             {
+            case MODE:
+                this->change_switch_option("mode");
+                break;
             case WORDS:
                 this->change_words_amount();
                 break;
@@ -357,13 +323,13 @@ void Typer::change_settings()
                 this->load_default_settings();
                 break;
             case SAVE:
-                this->save_settings(this->config_filename);
+                this->save_settings();
             case EXIT:
                 if (this->settings_changed)
                 {
                     terminal_jump_to(row_begin + (SETTINGS_LAST + 1) * row_separate, 0);
                     if (yes_no_question("You have unsaved changes to your configuration, would u like to save?"))
-                        this->save_settings(this->config_filename);
+                        this->save_settings();
                 }
                 return;
             default:
@@ -377,7 +343,7 @@ void Typer::change_settings()
             {
                 terminal_jump_to(row_begin + (SETTINGS_LAST + 1) * row_separate, 0);
                 if (yes_no_question("You have unsaved changes to your configuration, would u like to save?"))
-                    this->save_settings(this->config_filename);
+                    this->save_settings();
             }
             return;
         }
@@ -392,7 +358,7 @@ void Typer::change_words_amount()
 {
     std::string option_name;
     const uint16_t row_begin = 6, row_separate = 1;
-    const uint16_t no_options = 10, value_jump = 10;
+    const uint16_t no_options = 10, value_jump = 5;
     const std::string element_before_option = "-> ";
     uint16_t current_row = row_begin;
     int16_t move = 0;
@@ -431,23 +397,15 @@ void Typer::change_words_amount()
     }
 }
 
-void Typer::change_words_filename()
+void Typer::change_words_filename(const std::string &path)
 {
-    std::string path = "txt";
-    for (const auto &entry : std::filesystem::directory_iterator(path))
-        std::cout << entry.path().filename() << std::endl;
-
     std::string option_name;
     const uint16_t row_begin = 6, row_separate = 1;
-    const std::string element_before_option = "-> ";
+    const std::string element_before_option = "->> ";
     uint16_t current_row = row_begin;
     int16_t move = 0;
     char key;
-    std::string txt_files_path = "txt";
-    std::vector<std::string> files;
-
-    for (const auto &entry : std::filesystem::directory_iterator(txt_files_path))
-        files.push_back(entry.path().filename());
+    auto files = this->get_filenames_vector(path);
 
     system("clear");
     while (true)
@@ -473,8 +431,8 @@ void Typer::change_words_filename()
         {
             std::cout << path + "/" + files.at(((current_row - row_begin) / row_separate)) << std::endl;
             this->settings["words_filename"] = path + "/" + files.at(((current_row - row_begin) / row_separate));
-            this->settings_changed = true;
             Generator::change_file(this->settings["words_filename"]);
+            this->settings_changed = true;
             return;
         }
         else if (key == GO_BACK_SHORTCUT)
