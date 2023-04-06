@@ -141,8 +141,8 @@ int16_t handle_left_right_arrow_key(char key)
 void switch_menu_item(int16_t move, uint16_t &current_pos, const uint16_t lower_boundary, const uint16_t upper_boundary)
 {
     current_pos += move;
-    current_pos = current_pos < lower_boundary ? lower_boundary : current_pos;
-    current_pos = current_pos > upper_boundary ? upper_boundary : current_pos;
+    current_pos = current_pos < lower_boundary ? upper_boundary : current_pos;
+    current_pos = current_pos > upper_boundary ? lower_boundary : current_pos;
 }
 
 Typer::Typer() : Typer(DEFAULT_CONFIG_FILENAME) {}
@@ -151,7 +151,6 @@ Typer::Typer(std::string config_filename) : config_filename(config_filename)
 {
     this->load_settings();
     Generator::init(this->settings["words_filename"]);
-    this->results = {0, 0, 0, Generator::generate(std::stoi(this->settings["no_words"]))};
 }
 
 void Typer::select_menu()
@@ -188,7 +187,12 @@ void Typer::select_menu()
             switch ((current_row - row_begin) / row_separate)
             {
             case START:
-                this->reset(Generator::generate(std::stoi(this->settings["no_words"])));
+                if (this->settings["mode"] == CLASSIC_MODE)
+                    this->reset(Generator::generate(std::stoi(this->settings["no_words"])));
+                else if (this->settings["mode"] == TEXT_MODE)
+                    this->reset(Generator::get_text(this->settings["words_filename"]));
+                else
+                    return;
                 this->start_test();
                 break;
             case OPTIONS:
@@ -273,7 +277,7 @@ void Typer::reset(std::string &&goal)
 
 void Typer::change_settings()
 {
-    std::string option_name;
+    std::string option_name, previous_mode;
     const uint16_t row_begin = 6, row_separate = 1;
     uint16_t current_row = row_begin;
     int16_t move = 0;
@@ -305,19 +309,22 @@ void Typer::change_settings()
             switch ((current_row - row_begin) / row_separate)
             {
             case MODE:
-                this->change_switch_option("mode");
+                previous_mode = this->settings["mode"];
+                this->change_switch_option("mode", {{"CLASSIC", CLASSIC_MODE}, {"TEXTS", TEXT_MODE}});
+                if (previous_mode != this->settings["mode"])
+                    this->settings["words_filename"] = this->settings["mode"] == CLASSIC_MODE ? "words/words.txt" : "texts/text.txt";
                 break;
             case WORDS:
                 this->change_words_amount();
                 break;
             case FILENAME:
-                this->change_words_filename();
+                this->change_words_filename(this->settings["mode"] == CLASSIC_MODE ? "words" : "texts");
                 break;
             case TRAILING_CURSOR:
-                this->change_switch_option("trailing_cursor");
+                this->change_switch_option("trailing_cursor", {{"ON", "1"}, {"OFF", "0"}});
                 break;
             case SHOW_STATS:
-                this->change_switch_option("show_stats");
+                this->change_switch_option("show_stats", {{"ON", "1"}, {"OFF", "0"}});
                 break;
             case RESTORE_DEFAULT:
                 this->load_default_settings();
@@ -357,7 +364,7 @@ void Typer::change_settings()
 void Typer::change_words_amount()
 {
     std::string option_name;
-    const uint16_t row_begin = 6, row_separate = 1;
+    const int16_t row_begin = 6, row_separate = 1;
     const uint16_t no_options = 10, value_jump = 5;
     const std::string element_before_option = "-> ";
     uint16_t current_row = row_begin;
@@ -400,7 +407,7 @@ void Typer::change_words_amount()
 void Typer::change_words_filename(const std::string &path)
 {
     std::string option_name;
-    const uint16_t row_begin = 6, row_separate = 1;
+    const int16_t row_begin = 6, row_separate = 1;
     const std::string element_before_option = "->> ";
     uint16_t current_row = row_begin;
     int16_t move = 0;

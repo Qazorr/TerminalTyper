@@ -36,6 +36,15 @@
 
 #define DEFAULT_CONFIG_FILENAME "config.txt"
 
+#define CLASSIC_MODE "0"
+#define TEXT_MODE "1"
+
+struct option
+{
+    std::string name;
+    std::string value;
+};
+
 struct test_result
 {
     int64_t time;
@@ -113,7 +122,7 @@ private:
 
     /// @return current test time in seconds
     float get_time_s() { return this->results.time / 1000.f; }
-    
+
     /// @return current test WPM
     float get_WPM() { return (this->results.user_score / 5.f) / (this->results.time / 60000.f); }
 
@@ -188,7 +197,6 @@ private:
             save_settings(true);
     }
 
-
     /// @brief save current app settings
     /// @param default_settings if true restore default settings (defaults to false)
     void save_settings(bool default_settings = false)
@@ -203,30 +211,29 @@ private:
     }
 
     /// @brief menu for options with swichable values (e.g. true/false)
-    /// @param option setting name 
-    void change_switch_option(std::string option)
+    /// @param option setting name
+    void change_switch_option(std::string setting_name, std::vector<option> option_name_value)
     {
         std::string option_name;
-        const uint16_t row_begin = 6, col_begin = 5, col_separate = 5;
+        const int16_t row_begin = 6, col_begin = 5, col_separate = 10;
         uint16_t current_col = col_begin;
         int16_t move = 0;
-        std::string options[]{"ON", "OFF"};
         char key;
 
         system("clear");
         while (true)
         {
             terminal_jump_to(0, 0);
-            std::cout << "\033[1;34mChange " << option << " value.\n"
+            std::cout << "\033[1;34mChange " << setting_name << " value.\n"
                       << "Use arrow LEFT/RIGHT to move around.\n"
                       << "Press ENTER to choose a value\n"
                       << "Press 'q' to cancel\n"
                       << RESET;
-            for (int i = 0; i < 2; i++)
+            for (uint16_t i = 0; i < option_name_value.size(); i++)
             {
                 terminal_jump_to(row_begin, col_begin + i * col_separate);
-                option_name = current_col == col_begin + i * col_separate ? OPTION_PICKED_COLOR + options[i] + RESET
-                                                                          : options[i];
+                option_name = current_col == col_begin + i * col_separate ? OPTION_PICKED_COLOR + option_name_value[i].name + RESET
+                                                                          : option_name_value[i].name;
                 std::cout << option_name;
             }
             terminal_jump_to(row_begin, current_col);
@@ -235,15 +242,14 @@ private:
             move = handle_left_right_arrow_key(key) * col_separate;
             if (key == ENTER)
             {
-                std::string option_value = options[((current_col - col_begin) / col_separate)] == "ON" ? "1" : "0";
-                this->settings[option] = option_value;
+                this->settings[setting_name] = option_name_value[((current_col - col_begin) / col_separate)].value;
                 this->settings_changed = true;
                 return;
             }
             else if (key == GO_BACK_SHORTCUT)
                 return;
             else
-                switch_menu_item(move, current_col, col_begin, col_begin + 1 * col_separate);
+                switch_menu_item(move, current_col, col_begin, col_begin + (option_name_value.size() - 1) * col_separate);
         }
     }
 
@@ -278,14 +284,14 @@ public:
 
     /// @brief settings menu
     void change_settings();
-    
+
     /// @brief menu for words amount option
     void change_words_amount();
-    
+
     /// @brief menu for choosing filename for goal generation
     /// @param path path to directory with files
     void change_words_filename(const std::string &path = "words");
-    
+
     /// @brief run main app menu
     void run();
 };

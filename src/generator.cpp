@@ -20,6 +20,19 @@ std::string Generator::generate(uint32_t amount)
     return output.substr(0, output.length() - 1);
 }
 
+std::string Generator::get_text(std::string filepath)
+{
+    std::ifstream file(filepath);
+    if (!file)
+    {
+        std::cerr << "Unable to open file\n";
+        return std::string();
+    }
+    std::string line;
+    std::getline(file, line);
+    return line;
+}
+
 void Generator::init(std::string filepath)
 {
     if (initiated) return;
