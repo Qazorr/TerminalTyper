@@ -1,5 +1,7 @@
 #pragma once
 
+#include "logger.h"
+
 #include <iostream>
 #include <vector>
 #include <random>
@@ -12,6 +14,7 @@ class Generator
 private:
     static std::vector<std::string> lines;
     static bool initiated;
+    static Logger logger;
 
 public:
     Generator() = delete;

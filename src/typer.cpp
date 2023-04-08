@@ -147,7 +147,7 @@ void switch_menu_item(int16_t move, uint16_t &current_pos, const uint16_t lower_
 
 Typer::Typer() : Typer(DEFAULT_CONFIG_FILENAME) {}
 
-Typer::Typer(std::string config_filename) : config_filename(config_filename)
+Typer::Typer(std::string config_filename) : config_filename(config_filename), logger("typer.log", "typer.cpp"), results_logger("results.log", "typer.cpp")
 {
     this->load_settings();
     Generator::init(this->settings["words_filename"]);
@@ -234,6 +234,7 @@ void Typer::start_test()
     bool started = false;
 
     system("clear");
+    this->logger << "test with " + std::to_string(this->get_words_amount()) + " words and " + std::to_string(this->get_characters_amount()) + " characters started";
     while (this->results.user_score != this->results.goal.length())
     {
         if (this->settings["show_stats"] == "1")
@@ -259,6 +260,13 @@ void Typer::start_test()
     }
     this->results.time = since(begin).count();
     this->display_finish();
+
+    std::stringstream ss;
+    ss << std::setw(10) << std::left << this->format(this->get_accuracy() * 100, 4) + "%"
+       << std::setw(10) << std::left << this->format(this->results.time / 1000.f, 4) + "s"
+       << std::setw(10) << std::left << this->format(this->get_WPM(), 4) + "WPM";
+    this->results_logger << ss.str();
+
     terminal_jump_to(12, 0);
     if (yes_no_question("Would you like to do the same text again?"))
     {
@@ -269,10 +277,16 @@ void Typer::start_test()
 
 void Typer::reset(std::string &&goal)
 {
-    if (goal == "") // same goal as previously
+    if (goal == "")
+    {
         this->results = {0, 0, 0, this->results.goal};
-    else // new goal
+        this->logger << "goal reset";
+    }
+    else
+    {
         this->results = {0, 0, 0, std::move(goal)};
+        this->logger << "new goal set";
+    }
 }
 
 void Typer::change_settings()
@@ -312,7 +326,11 @@ void Typer::change_settings()
                 previous_mode = this->settings["mode"];
                 this->change_switch_option("mode", {{"CLASSIC", CLASSIC_MODE}, {"TEXTS", TEXT_MODE}});
                 if (previous_mode != this->settings["mode"])
-                    this->settings["words_filename"] = this->settings["mode"] == CLASSIC_MODE ? "words/words.txt" : "texts/text.txt";
+                {
+                    std::string path = (this->settings["mode"] == CLASSIC_MODE ? "words" : "texts");
+                    this->settings["words_filename"] = path + "/" + get_first_file(path);
+                    this->logger << "filename changed to: < " + this->settings["words_filename"] + " >";
+                }
                 break;
             case WORDS:
                 this->change_words_amount();
@@ -334,7 +352,7 @@ void Typer::change_settings()
             case EXIT:
                 if (this->settings_changed)
                 {
-                    terminal_jump_to(row_begin + (SETTINGS_LAST + 1) * row_separate, 0);
+                    terminal_jump_to(row_begin + (SETTINGS_LAST + 2) * row_separate, 0);
                     if (yes_no_question("You have unsaved changes to your configuration, would u like to save?"))
                         this->save_settings();
                 }
@@ -348,7 +366,7 @@ void Typer::change_settings()
         {
             if (this->settings_changed)
             {
-                terminal_jump_to(row_begin + (SETTINGS_LAST + 1) * row_separate, 0);
+                terminal_jump_to(row_begin + (SETTINGS_LAST + 2) * row_separate, 0);
                 if (yes_no_question("You have unsaved changes to your configuration, would u like to save?"))
                     this->save_settings();
             }
@@ -395,6 +413,7 @@ void Typer::change_words_amount()
         {
             this->settings["no_words"] = std::to_string(value_jump * (((current_row - row_begin) / row_separate) + 1));
             this->settings_changed = true;
+            this->logger << "words amount changed to: < " + this->settings["no_words"] + " >";
             return;
         }
         else if (key == GO_BACK_SHORTCUT)
@@ -436,10 +455,10 @@ void Typer::change_words_filename(const std::string &path)
         move = handle_up_down_arrow_key(key) * row_separate;
         if (key == ENTER)
         {
-            std::cout << path + "/" + files.at(((current_row - row_begin) / row_separate)) << std::endl;
             this->settings["words_filename"] = path + "/" + files.at(((current_row - row_begin) / row_separate));
             Generator::change_file(this->settings["words_filename"]);
             this->settings_changed = true;
+            this->logger << "filename changed to: < " + this->settings["words_filename"] + " >";
             return;
         }
         else if (key == GO_BACK_SHORTCUT)
@@ -451,5 +470,6 @@ void Typer::change_words_filename(const std::string &path)
 
 void Typer::run()
 {
+    this->logger << "app run";
     this->select_menu();
 }

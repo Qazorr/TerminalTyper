@@ -1,6 +1,7 @@
 #pragma once
 
 #include "generator.h"
+#include "logger.h"
 
 #include <iostream>
 #include <unistd.h>
@@ -86,7 +87,10 @@ private:
     std::string config_filename;
     std::map<std::string, std::string> settings;
     bool settings_changed = false;
+    Logger logger, results_logger;
 
+    /// @param start relative time point 
+    /// @return time from the start point to now in milliseconds
     template <
         class result_t = std::chrono::milliseconds,
         class clock_t = std::chrono::steady_clock,
@@ -126,6 +130,20 @@ private:
     /// @return current test WPM
     float get_WPM() { return (this->results.user_score / 5.f) / (this->results.time / 60000.f); }
 
+    /// @return current test characters amount
+    uint16_t get_characters_amount() { return this->results.goal.length(); }
+
+    /// @return current test word count
+    uint16_t get_words_amount()
+    {
+        std::stringstream ss(this->results.goal);
+        std::string word;
+        uint16_t count = 0;
+        while (ss >> word)
+            ++count;
+        return count;
+    }
+
     /// @brief display test stats (accuracy, time, WPM)
     void display_stats()
     {
@@ -163,6 +181,7 @@ private:
     {
         system("clear");
         terminal_jump_to(0, 0);
+        this->logger << "app quit";
         exit(EXIT_SUCCESS);
     }
 
@@ -175,6 +194,7 @@ private:
             {"words_filename", "words/words.txt"},
             {"trailing_cursor", "1"},
             {"show_stats", "1"}};
+        this->logger << "loaded default settings";
     }
 
     /// @brief load settings from app's config file
@@ -192,6 +212,7 @@ private:
                 settings[name] = value;
             }
             infile.close();
+            this->logger << "loaded settings from config file " + this->config_filename;
         }
         else
             save_settings(true);
@@ -208,10 +229,12 @@ private:
             outfile << name << "=" << value << std::endl;
         outfile.close();
         this->settings_changed = false;
+        this->logger << "settings saved to " + this->config_filename;
     }
 
     /// @brief menu for options with swichable values (e.g. true/false)
-    /// @param option setting name
+    /// @param setting_name what appears on the option menu
+    /// @param option_name_value possible names and values for given option like {{"ON", "1"}, {"OFF", "0"}}
     void change_switch_option(std::string setting_name, std::vector<option> option_name_value)
     {
         std::string option_name;
@@ -244,6 +267,7 @@ private:
             {
                 this->settings[setting_name] = option_name_value[((current_col - col_begin) / col_separate)].value;
                 this->settings_changed = true;
+                this->logger << setting_name + " changed to: < " + option_name_value[((current_col - col_begin) / col_separate)].name + " >";
                 return;
             }
             else if (key == GO_BACK_SHORTCUT)
@@ -255,13 +279,21 @@ private:
 
     /// @brief get all files from given path
     /// @param path path to directory with files
-    /// @return vector with file names
+    /// @return vector with file names without path
     std::vector<std::string> get_filenames_vector(std::string path)
     {
         std::vector<std::string> files;
         for (const auto &entry : std::filesystem::directory_iterator(path))
             files.push_back(entry.path().filename());
         return files;
+    }
+
+    /// @brief get first file from given path
+    /// @param path path to directory with files
+    /// @return name of first file without the path to it
+    std::string get_first_file(std::string path)
+    {
+        return (*std::filesystem::directory_iterator(path)).path().filename();
     }
 
 public:

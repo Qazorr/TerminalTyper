@@ -3,6 +3,7 @@
 SRC_PATH=src
 GENERATOR=generator
 TYPER=typer
+LOGGER=logger
 DELETE_AFTER=1
  
 function usage() {
@@ -39,7 +40,7 @@ function check() {
         exit 1        
     fi 
  
-    if !([ -f "$SRC_PATH/$GENERATOR.cpp" ]) || !([ -f "$SRC_PATH/$TYPER.cpp" ])
+    if !([ -f "$SRC_PATH/$GENERATOR.cpp" ]) || !([ -f "$SRC_PATH/$TYPER.cpp" ]) || !([ -f "$SRC_PATH/$LOGGER.cpp" ])
     then
         echo 'No .cpp files'
         cleanup
@@ -59,7 +60,7 @@ function run_and_delete() {
  
 # Enumerate the files and compile them
 function compile() {
-    for cpp_file in $SRC_PATH/$GENERATOR $SRC_PATH/$TYPER main
+    for cpp_file in $SRC_PATH/$GENERATOR $SRC_PATH/$TYPER $SRC_PATH/$LOGGER main
     do
         echo "Compiling $cpp_file.cpp"
         g++ -std=c++17 -Wall -pedantic -c $cpp_file.cpp -o $cpp_file.obj 
@@ -70,7 +71,7 @@ function compile() {
             exit 1
         fi
     done
-    g++ $SRC_PATH/$GENERATOR.obj $SRC_PATH/$TYPER.obj main.obj -o main.x
+    g++ $SRC_PATH/$GENERATOR.obj $SRC_PATH/$TYPER.obj $SRC_PATH/$LOGGER.obj main.obj -o main.x
     do_clean
 }
 check
