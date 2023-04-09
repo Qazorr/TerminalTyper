@@ -32,6 +32,8 @@
 #define CORRECT_COLOR "\033[1;32m"
 #define FINISHED_COLOR "\033[1;34m"
 #define STATS_COLOR "\033[1;36m"
+#define DESCRIPTION_COLOR "\033[1;34m"
+#define OPTION_CONFIG_COLOR "\033[1;3;4;35m"
 #define OPTION_PICKED_COLOR "\033[1;4;6;32m"
 #define RESET "\033[0m"
 
@@ -80,6 +82,9 @@ int16_t handle_left_right_arrow_key(char key);
 /// @param upper_boundary biggest possible value
 void switch_menu_item(int16_t move, uint16_t &current_pos, const uint16_t lower_boundary, const uint16_t upper_boundary);
 
+/// @brief clear terminal output
+void clear_terminal();
+
 class Typer
 {
 private:
@@ -89,7 +94,7 @@ private:
     bool settings_changed = false;
     Logger logger, results_logger;
 
-    /// @param start relative time point 
+    /// @param start relative time point
     /// @return time from the start point to now in milliseconds
     template <
         class result_t = std::chrono::milliseconds,
@@ -179,7 +184,7 @@ private:
     /// @brief quit app
     void quit()
     {
-        system("clear");
+        clear_terminal();
         terminal_jump_to(0, 0);
         this->logger << "app quit";
         exit(EXIT_SUCCESS);
@@ -238,26 +243,40 @@ private:
     void change_switch_option(std::string setting_name, std::vector<option> option_name_value)
     {
         std::string option_name;
-        const int16_t row_begin = 6, col_begin = 5, col_separate = 10;
+
+        std::stringstream ss;
+        ss << DESCRIPTION_COLOR << "Change " << setting_name << " value.\n"
+                  << "Note " << OPTION_CONFIG_COLOR << "this color" << RESET << DESCRIPTION_COLOR " means this setting is already chosen\n"
+                  << "Use arrow LEFT/RIGHT to move around.\n"
+                  << "Press ENTER to choose a value\n"
+                  << "Press 'q' to cancel\n"
+                  << RESET;
+        std::string description = ss.str();
+
+        const int16_t row_begin = std::count(description.begin(), description.end(), '\n') + 2, col_begin = 5, col_separate = 10;
         uint16_t current_col = col_begin;
         int16_t move = 0;
         char key;
 
-        system("clear");
+        auto is_hovered = [&current_col](uint32_t option_number)
+        { return (col_begin + option_number * col_separate) == current_col; };
+
+        clear_terminal();
         while (true)
         {
             terminal_jump_to(0, 0);
-            std::cout << "\033[1;34mChange " << setting_name << " value.\n"
-                      << "Use arrow LEFT/RIGHT to move around.\n"
-                      << "Press ENTER to choose a value\n"
-                      << "Press 'q' to cancel\n"
-                      << RESET;
+            std::cout << description;
             for (uint16_t i = 0; i < option_name_value.size(); i++)
             {
                 terminal_jump_to(row_begin, col_begin + i * col_separate);
-                option_name = current_col == col_begin + i * col_separate ? OPTION_PICKED_COLOR + option_name_value[i].name + RESET
-                                                                          : option_name_value[i].name;
-                std::cout << option_name;
+                if (this->is_from_config(option_name_value[i].value, setting_name) && !is_hovered(i))
+                    std::cout << OPTION_CONFIG_COLOR << option_name_value[i].name << RESET;
+                else
+                {
+                    option_name = is_hovered(i) ? OPTION_PICKED_COLOR + option_name_value[i].name + RESET
+                                                : option_name_value[i].name;
+                    std::cout << option_name;
+                }
             }
             terminal_jump_to(row_begin, current_col);
             std::cout.flush();
@@ -277,6 +296,11 @@ private:
         }
     }
 
+    bool is_from_config(const std::string &option_value, const std::string &setting_name)
+    {
+        return option_value == this->settings[setting_name];
+    }
+
     /// @brief get all files from given path
     /// @param path path to directory with files
     /// @return vector with file names without path
@@ -290,10 +314,17 @@ private:
 
     /// @brief get first file from given path
     /// @param path path to directory with files
-    /// @return name of first file without the path to it
+    /// @return name of first file without the path to it if any exists, else ""
     std::string get_first_file(std::string path)
     {
-        return (*std::filesystem::directory_iterator(path)).path().filename();
+        try
+        {
+            return (*std::filesystem::directory_iterator(path)).path().filename();
+        }
+        catch (const std::exception &e)
+        {
+            return std::string("");
+        }
     }
 
 public:

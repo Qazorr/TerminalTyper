@@ -145,6 +145,11 @@ void switch_menu_item(int16_t move, uint16_t &current_pos, const uint16_t lower_
     current_pos = current_pos > upper_boundary ? lower_boundary : current_pos;
 }
 
+void clear_terminal()
+{
+    system("clear");
+}
+
 Typer::Typer() : Typer(DEFAULT_CONFIG_FILENAME) {}
 
 Typer::Typer(std::string config_filename) : config_filename(config_filename), logger("typer.log", "typer.cpp"), results_logger("results.log", "typer.cpp")
@@ -155,13 +160,13 @@ Typer::Typer(std::string config_filename) : config_filename(config_filename), lo
 
 void Typer::select_menu()
 {
-    std::string option_name;
+    std::string option_name, test;
     const uint16_t row_begin = 6, row_separate = 2;
     uint16_t current_row = row_begin;
     int16_t move = 0;
     char key;
 
-    system("clear");
+    clear_terminal();
     while (true)
     {
         terminal_jump_to(0, 0);
@@ -209,7 +214,7 @@ void Typer::select_menu()
             default:
                 break;
             }
-            system("clear");
+            clear_terminal();
         }
         else if (key == GO_BACK_SHORTCUT)
         {
@@ -233,7 +238,7 @@ void Typer::start_test()
     std::string debug = "";
     bool started = false;
 
-    system("clear");
+    clear_terminal();
     this->logger << "test with " + std::to_string(this->get_words_amount()) + " words and " + std::to_string(this->get_characters_amount()) + " characters started";
     while (this->results.user_score != this->results.goal.length())
     {
@@ -297,7 +302,7 @@ void Typer::change_settings()
     int16_t move = 0;
     char key;
 
-    system("clear");
+    clear_terminal();
     while (true)
     {
         terminal_jump_to(0, 0);
@@ -360,7 +365,7 @@ void Typer::change_settings()
             default:
                 break;
             }
-            system("clear");
+            clear_terminal();
         }
         else if (key == GO_BACK_SHORTCUT)
         {
@@ -381,29 +386,43 @@ void Typer::change_settings()
 
 void Typer::change_words_amount()
 {
-    std::string option_name;
-    const int16_t row_begin = 6, row_separate = 1;
+    std::stringstream ss;
+    ss << DESCRIPTION_COLOR << "Change amount of words displayed for you to type\n"
+       << "Note " << OPTION_CONFIG_COLOR << "this color" << RESET << DESCRIPTION_COLOR " means this setting is already chosen\n"
+       << "Use arrow UP/DOWN to move around.\n"
+       << "Press ENTER to choose words amount\n"
+       << "Press 'q' to cancel\n"
+       << RESET;
+    std::string description = ss.str();
+
+    std::string option_name, words_amount;
+    const int16_t row_begin = std::count(description.begin(), description.end(), '\n') + 2, row_separate = 1;
     const uint16_t no_options = 10, value_jump = 5;
-    const std::string element_before_option = "-> ";
+    const std::string element_before_option = "-> ", words_setting_name = "no_words";
     uint16_t current_row = row_begin;
     int16_t move = 0;
     char key;
 
-    system("clear");
+    auto is_hovered = [&current_row, &row_begin](uint32_t option_number)
+    { return (row_begin + option_number * row_separate) == current_row; };
+
+    clear_terminal();
     while (true)
     {
         terminal_jump_to(0, 0);
-        std::cout << "\033[1;34mChange amount of words displayed for you to type\n"
-                  << "Use arrow UP/DOWN to move around.\n"
-                  << "Press ENTER to choose words amount\n"
-                  << "Press 'q' to cancel\n"
-                  << RESET;
+        std::cout << description;
         for (int i = 0; i < no_options; i++)
         {
             terminal_jump_to(row_begin + i * row_separate, 0);
-            option_name = current_row == row_begin + i * row_separate ? OPTION_PICKED_COLOR + element_before_option + std::to_string((i + 1) * value_jump) + RESET
-                                                                      : element_before_option + std::to_string((i + 1) * value_jump);
-            std::cout << option_name << std::endl;
+            words_amount = std::to_string((i + 1) * value_jump);
+            if (this->is_from_config(words_amount, words_setting_name) && !is_hovered(i))
+                std::cout << OPTION_CONFIG_COLOR << element_before_option << words_amount << RESET;
+            else
+            {
+                option_name = is_hovered(i) ? OPTION_PICKED_COLOR + element_before_option + words_amount + RESET
+                                            : element_before_option + words_amount;
+                std::cout << option_name << std::endl;
+            }
         }
         terminal_jump_to(current_row, 2);
         std::cout.flush();
@@ -411,9 +430,9 @@ void Typer::change_words_amount()
         move = handle_up_down_arrow_key(key) * row_separate;
         if (key == ENTER)
         {
-            this->settings["no_words"] = std::to_string(value_jump * (((current_row - row_begin) / row_separate) + 1));
+            this->settings[words_setting_name] = std::to_string(value_jump * (((current_row - row_begin) / row_separate) + 1));
             this->settings_changed = true;
-            this->logger << "words amount changed to: < " + this->settings["no_words"] + " >";
+            this->logger << "words amount changed to: < " + this->settings[words_setting_name] + " >";
             return;
         }
         else if (key == GO_BACK_SHORTCUT)
@@ -425,29 +444,41 @@ void Typer::change_words_amount()
 
 void Typer::change_words_filename(const std::string &path)
 {
-    std::string option_name;
-    const int16_t row_begin = 6, row_separate = 1;
-    const std::string element_before_option = "->> ";
+    std::stringstream ss;
+    ss << DESCRIPTION_COLOR << "Change words input filename (from " << path << "/ directory).\n"
+       << "Note " << OPTION_CONFIG_COLOR << "this color" << RESET << DESCRIPTION_COLOR " means this setting is already chosen\n"
+       << "Use arrow UP/DOWN to move around.\n"
+       << "Press ENTER to choose file\n"
+       << "Press 'q' to cancel\n"
+       << RESET;
+    std::string option_name, description = ss.str();
+
+    const int16_t row_begin = std::count(description.begin(), description.end(), '\n') + 2, row_separate = 1;
+    const std::string element_before_option = "->> ", filename_setting_name = "words_filename";
     uint16_t current_row = row_begin;
     int16_t move = 0;
     char key;
     auto files = this->get_filenames_vector(path);
 
-    system("clear");
+    auto is_hovered = [&current_row, &row_begin](uint32_t option_number)
+    { return (row_begin + option_number * row_separate) == current_row; };
+
+    clear_terminal();
     while (true)
     {
         terminal_jump_to(0, 0);
-        std::cout << "\033[1;34mChange words input filename (from txt/ directory).\n"
-                  << "Use arrow UP/DOWN to move around.\n"
-                  << "Press ENTER to choose file\n"
-                  << "Press 'q' to cancel\n"
-                  << RESET;
+        std::cout << description;
         for (uint32_t i = 0; i < files.size(); i++)
         {
             terminal_jump_to(row_begin + i * row_separate, 0);
-            option_name = current_row == row_begin + i * row_separate ? OPTION_PICKED_COLOR + element_before_option + files.at(i) + RESET
-                                                                      : element_before_option + files.at(i);
-            std::cout << option_name << std::endl;
+            if (this->is_from_config(path + "/" + files.at(i), filename_setting_name) && !is_hovered(i))
+                std::cout << OPTION_CONFIG_COLOR << element_before_option << files.at(i) << RESET;
+            else
+            {
+                option_name = is_hovered(i) ? OPTION_PICKED_COLOR + element_before_option + files.at(i) + RESET
+                                            : element_before_option + files.at(i);
+                std::cout << option_name << std::endl;
+            }
         }
         terminal_jump_to(current_row, 2);
         std::cout.flush();
@@ -455,10 +486,10 @@ void Typer::change_words_filename(const std::string &path)
         move = handle_up_down_arrow_key(key) * row_separate;
         if (key == ENTER)
         {
-            this->settings["words_filename"] = path + "/" + files.at(((current_row - row_begin) / row_separate));
-            Generator::change_file(this->settings["words_filename"]);
+            this->settings[filename_setting_name] = path + "/" + files.at(((current_row - row_begin) / row_separate));
+            Generator::change_file(this->settings[filename_setting_name]);
             this->settings_changed = true;
-            this->logger << "filename changed to: < " + this->settings["words_filename"] + " >";
+            this->logger << "filename changed to: < " + this->settings[filename_setting_name] + " >";
             return;
         }
         else if (key == GO_BACK_SHORTCUT)
