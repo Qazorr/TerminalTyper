@@ -19,7 +19,7 @@ public:
         std::time_t currentTime = std::time(nullptr);
         std::tm localTime = *std::localtime(&currentTime);
 
-        log_file << "[" << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S") << "] " << this->filename << ": " << message << std::endl;
+        log_file << "[" << std::put_time(&localTime, "%H:%M:%S-%Y-%m-%d") << "] " << this->filename << ": " << message << std::endl;
         return *this;
     }
 
