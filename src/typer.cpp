@@ -150,6 +150,21 @@ void clear_terminal()
     system("clear");
 }
 
+terminal_size get_terminal_size()
+{
+    struct winsize size;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
+    int width = size.ws_col;
+    int height = size.ws_row;
+    return {width, height};
+}
+
+void print_centered(const std::string &text, const int desired_size, const char begin_end_char)
+{
+    int left_padding = (get_terminal_size().width - desired_size) / 2;
+    std::cout << std::string(left_padding - 1, ' ') << begin_end_char << std::setw(desired_size) << text << begin_end_char << std::endl;
+}
+
 Typer::Typer() : Typer(DEFAULT_CONFIG_FILENAME) {}
 
 Typer::Typer(std::string config_filename) : config_filename(config_filename), logger("typer.log", "typer.cpp"), results_logger("results.log", "typer.cpp")
@@ -237,22 +252,26 @@ void Typer::start_test()
     auto begin = std::chrono::steady_clock::now();
     std::string debug = "";
     bool started = false;
+    terminal_size term_size = get_terminal_size(), previous_term_size;
 
     clear_terminal();
     this->logger << "test with " + std::to_string(this->get_words_amount()) + " words and " + std::to_string(this->get_characters_amount()) + " characters started";
     while (this->results.user_score != this->results.goal.length())
     {
+        previous_term_size = term_size;
+        term_size = get_terminal_size();
+        if (previous_term_size != term_size)
+            clear_terminal();
         if (this->settings["show_stats"] == "1")
             this->results.time = since(begin).count();
         this->display_progress();
         if (this->settings["trailing_cursor"] == "1")
         {
-            terminal_jump_to(0, this->results.user_score + 1);
+            terminal_jump_to(((this->results.user_score + 1) / term_size.width) + 1, (this->results.user_score + 1) % term_size.width);
             std::cout.flush();
         }
         in = get_input();
-        if (in == ESCAPE)
-            break;
+        if (in == ESCAPE) break;
         if (!started)
         {
             started = true;
@@ -272,12 +291,24 @@ void Typer::start_test()
        << std::setw(10) << std::left << this->format(this->get_WPM(), 4) + "WPM";
     this->results_logger << ss.str();
 
+    //? call for next user action 
     terminal_jump_to(12, 0);
-    if (yes_no_question("Would you like to do the same text again?"))
+    std::cout << "What do you want to do next? [click first letter]"
+              << " (Again/Restart/Quit)\r";
+    std::cout.flush();
+    do
+        in = tolower(get_input());
+    while (in != 'a' && in != 'r' && in != 'q');
+    if (in == 'q') return;
+    else if (in == 'a') this->reset();
+    else
     {
-        this->reset();
-        this->start_test();
+        if (this->settings["mode"] == CLASSIC_MODE)
+            this->reset(Generator::generate(std::stoi(this->settings["no_words"])));
+        else if (this->settings["mode"] == TEXT_MODE)
+            this->reset(Generator::get_text(this->settings["words_filename"]));
     }
+    this->start_test();
 }
 
 void Typer::reset(std::string &&goal)

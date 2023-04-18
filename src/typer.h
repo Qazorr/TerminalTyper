@@ -12,6 +12,7 @@
 #include <cctype>
 #include <map>
 #include <filesystem>
+#include <sys/ioctl.h>
 
 #define terminal_jump_to(row, col) printf("\033[%d;%dH", row, col);
 #define TEXT_START_ROW 0
@@ -46,6 +47,21 @@ struct option
 {
     std::string name;
     std::string value;
+};
+
+struct terminal_size
+{
+    int width, height;
+
+    bool operator==(const terminal_size &other) const
+    {
+        return width == other.width && height == other.height;
+    }
+
+    bool operator!=(const terminal_size &other) const
+    {
+        return !(*this == other);
+    }
 };
 
 struct test_result
@@ -84,6 +100,10 @@ void switch_menu_item(int16_t move, uint16_t &current_pos, const uint16_t lower_
 
 /// @brief clear terminal output
 void clear_terminal();
+
+terminal_size get_terminal_size();
+
+void print_centered(const std::string &text, const int desired_size = 30, const char begin_end_char = '|');
 
 class Typer
 {
@@ -152,14 +172,17 @@ private:
     /// @brief display test stats (accuracy, time, WPM)
     void display_stats()
     {
+        const int desired_width = 30;
+        const std::string bottom_top_line(desired_width, '-');
         terminal_jump_to(STATS_START_ROW, STATS_START_COL);
         std::cout << STATS_COLOR;
-        std::cout << '+' << std::string(25, '-') << '+' << std::endl;
-        std::cout << '|' << std::setw(25) << "Accuracy: " + this->format(this->get_accuracy() * 100, 4) + "% " << '|' << std::endl;
-        std::cout << '|' << std::setw(25) << "Elapsed = " + this->format(this->results.time / 1000.f, 4) + "s " << '|' << std::endl;
-        std::cout << '|' << std::setw(25) << "WPM = " + this->format(this->get_WPM(), 4) + " " << '|' << std::endl;
-        std::cout << '|' << std::setw(25) << "Characters:  " + std::to_string(this->results.user_score) + "/" + std::to_string(this->results.goal.length()) + " " << '|' << std::endl;
-        std::cout << '+' << std::string(25, '-') << RESET << "+\n\n";
+        print_centered(bottom_top_line, desired_width, '+');
+        print_centered("Accuracy: " + this->format(this->get_accuracy() * 100, 4) + "% ", desired_width);
+        print_centered("Elapsed = " + this->format(this->results.time / 1000.f, 4) + "s ", desired_width);
+        print_centered("WPM = " + this->format(this->get_WPM(), 4) + " ", desired_width);
+        print_centered("Characters:  " + std::to_string(this->results.user_score) + "/" + std::to_string(this->results.goal.length()) + " ", desired_width);
+        print_centered(bottom_top_line, desired_width, '+');
+        std::cout << RESET << "\n";
     }
 
     /// @brief display test progress (already typed and to be typed)
@@ -246,11 +269,11 @@ private:
 
         std::stringstream ss;
         ss << DESCRIPTION_COLOR << "Change " << setting_name << " value.\n"
-                  << "Note " << OPTION_CONFIG_COLOR << "this color" << RESET << DESCRIPTION_COLOR " means this setting is already chosen\n"
-                  << "Use arrow LEFT/RIGHT to move around.\n"
-                  << "Press ENTER to choose a value\n"
-                  << "Press 'q' to cancel\n"
-                  << RESET;
+           << "Note " << OPTION_CONFIG_COLOR << "this color" << RESET << DESCRIPTION_COLOR " means this setting is already chosen\n"
+           << "Use arrow LEFT/RIGHT to move around.\n"
+           << "Press ENTER to choose a value\n"
+           << "Press 'q' to cancel\n"
+           << RESET;
         std::string description = ss.str();
 
         const int16_t row_begin = std::count(description.begin(), description.end(), '\n') + 2, col_begin = 5, col_separate = 10;
