@@ -14,14 +14,15 @@ function usage() {
     echo '-l                     delete source log files'
     echo '-r                     delete results log file'
     echo '--erase-log            combined -l and -r'
+    echo '--all                  delete binary and log files (-elr)'
     echo '-h                     show this message'
 }
 
 # handle arguments
 while getopts ":elrh-:" opt; do
     case $opt in
-    e | erase-binary)
-        echo 'Delete after finish flag is set'
+    e)
+        echo 'Delete binary after finish flag is set'
         DELETE_AFTER=0
         ;;
     l)
@@ -44,8 +45,14 @@ while getopts ":elrh-:" opt; do
             DELETE_RESULT=0
             ;;
         erase-binary)
-            echo 'Delete after finish flag is set'
+            echo 'Delete after finish flag is set d'
             DELETE_AFTER=0
+            ;;
+        all)
+            echo 'Delete binary and log files after finish flag is set'
+            DELETE_AFTER=0
+            DELETE_LOGS=0
+            DELETE_RESULT=0
             ;;
         *)
             echo "Invalid option: --${OPTARG}" >&2
