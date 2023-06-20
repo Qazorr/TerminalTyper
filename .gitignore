@@ -3,3 +3,4 @@ config.txt
 *.x
 *.obj
 logs/
+build/

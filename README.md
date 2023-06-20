@@ -26,4 +26,4 @@
 
 ## Special thanks to:
 
-* [@ffffffffffffffff0](https://github.com/ffffffffffffffff0) for the **run.sh** script
+* [@ffffffffffffffff0](https://github.com/ffffffffffffffff0) for the first iteration of **run.sh** script
