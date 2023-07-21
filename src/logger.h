@@ -1,15 +1,14 @@
 #pragma once
 
-#include <iostream>
-#include <fstream>
 #include <chrono>
 #include <ctime>
-#include <iomanip>
 #include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
 
-class Logger
-{
-public:
+class Logger {
+  public:
     Logger(std::string log_filename, std::string filename);
     ~Logger();
 
@@ -17,9 +16,10 @@ public:
     Logger &operator<<(const T &message)
     {
         std::time_t currentTime = std::time(nullptr);
-        std::tm localTime = *std::localtime(&currentTime);
+        std::tm localTime       = *std::localtime(&currentTime);
 
-        log_file << "[" << std::put_time(&localTime, "%H:%M:%S-%Y-%m-%d") << "] " << this->filename << ": " << message << std::endl;
+        log_file << "[" << std::put_time(&localTime, "%H:%M:%S-%Y-%m-%d")
+                 << "] " << this->filename << ": " << message << std::endl;
         return *this;
     }
 
@@ -29,7 +29,7 @@ public:
         return *this;
     }
 
-private:
+  private:
     std::ofstream log_file;
     std::string filename;
 };

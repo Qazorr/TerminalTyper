@@ -2,21 +2,20 @@
 
 #include "logger.h"
 
-#include <iostream>
-#include <vector>
-#include <random>
-#include <fstream>
 #include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <random>
 #include <sstream>
+#include <vector>
 
-class Generator
-{
-private:
+class Generator {
+  private:
     static std::vector<std::string> lines;
     static bool initiated;
     static Logger logger;
 
-public:
+  public:
     Generator() = delete;
 
     static void init(std::string filepath = "txt/words.txt");

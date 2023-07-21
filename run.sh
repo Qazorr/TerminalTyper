@@ -1,41 +1,27 @@
 #!/bin/bash
 
-# Set the name of CMake build directory
 BUILD_DIR="build"
 EXECUTABLE_NAME="TerminalTyper"
 LOGS_DIR="logs"
 
 function build() {
-    # Change to the build directory
     cd $BUILD_DIR || exit
-
-    # Generate the build files using CMake
     cmake ..
-
-    # Build the project
     make
-
     cd ..
 }
 
 function rebuild() {
     rm -rf $BUILD_DIR
-
-    # Create the build directory if it doesn't exist
     mkdir -p $BUILD_DIR
-
     build
 }
 
 function run() {
-    # Check if the build directory exists
     if [ -d "$BUILD_DIR" ]; then
-        # Change to the build directory
         cd $BUILD_DIR || exit
 
-        # Check if the executable exists
         if [ -x "$EXECUTABLE_NAME" ]; then
-            # Run the executable
             cd ..
 
             ./$BUILD_DIR/$EXECUTABLE_NAME
@@ -59,12 +45,27 @@ function run() {
     fi
 }
 
+format_file() {
+    echo "Formatting file: $1"
+    clang-format -i "$1"
+}
+
+function format() {
+    cd "$(dirname "$0")" || exit
+
+    find . \( -iname "*.cpp" -o -iname "*.h" \) -not -path "./build/*" -print0 | while IFS= read -r -d '' file; do
+        format_file "$file"
+    done
+
+}
+
 function usage() {
     echo "Usage: $0 [OPTION]"
     echo "Options:"
     echo "  --build        Build the project"
     echo "  --rebuild      Clean and rebuild the project"
     echo "  --no-logs      Delete logs after a successful run"
+    echo "  --format       Run clang-format for every file in the project"
     echo "  --help         Show usage instructions"
 }
 
@@ -81,7 +82,7 @@ fi
 
 if [ "$1" == "--format" ]; then
     format
-    shift
+    exit 0
 fi
 
 if [ "$1" == "--no-logs" ]; then

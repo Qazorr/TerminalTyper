@@ -2,17 +2,17 @@
 
 #include "generator.h"
 #include "logger.h"
-
-#include <iostream>
-#include <unistd.h>
-#include <termios.h>
-#include <chrono>
-#include <iomanip>
-#include <math.h>
-#include <cctype>
-#include <map>
-#include <filesystem>
 #include <sys/ioctl.h>
+
+#include <cctype>
+#include <chrono>
+#include <filesystem>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <math.h>
+#include <termios.h>
+#include <unistd.h>
 
 #define terminal_jump_to(row, col) printf("\033[%d;%dH", row, col);
 #define TEXT_START_ROW 0
@@ -91,23 +91,26 @@ int16_t handle_up_down_arrow_key(char key);
 /// @return 1 for arrow right, -1 for arrow left, else 0
 int16_t handle_left_right_arrow_key(char key);
 
-/// @brief safely change the value of current position without exiting the boundaries in one direction (horizontally/vertically)
+/// @brief safely change the value of current position without exiting the
+/// boundaries in one direction (horizontally/vertically)
 /// @param move 1 for up/right, -1 for down/left movement
 /// @param current_pos x/y position
 /// @param lower_boundary smallest possible value
 /// @param upper_boundary biggest possible value
-void switch_menu_item(int16_t move, uint16_t &current_pos, const uint16_t lower_boundary, const uint16_t upper_boundary);
+void switch_menu_item(int16_t move, uint16_t &current_pos,
+                      const uint16_t lower_boundary,
+                      const uint16_t upper_boundary);
 
 /// @brief clear terminal output
 void clear_terminal();
 
 terminal_size get_terminal_size();
 
-void print_centered(const std::string &text, const int desired_size = 30, const char begin_end_char = '|');
+void print_centered(const std::string &text, const int desired_size = 30,
+                    const char begin_end_char = '|');
 
-class Typer
-{
-private:
+class Typer {
+  private:
     test_result results;
     std::string config_filename;
     std::map<std::string, std::string> settings;
@@ -116,21 +119,22 @@ private:
 
     /// @param start relative time point
     /// @return time from the start point to now in milliseconds
-    template <
-        class result_t = std::chrono::milliseconds,
-        class clock_t = std::chrono::steady_clock,
-        class duration_t = std::chrono::milliseconds>
-    std::chrono::milliseconds since(std::chrono::time_point<clock_t, duration_t> const &start)
+    template <class result_t   = std::chrono::milliseconds,
+              class clock_t    = std::chrono::steady_clock,
+              class duration_t = std::chrono::milliseconds>
+    std::chrono::milliseconds
+    since(std::chrono::time_point<clock_t, duration_t> const &start)
     {
         return std::chrono::duration_cast<result_t>(clock_t::now() - start);
     }
 
-    /// @brief split target goal of current test into two parts (already typed and to be typed)
+    /// @brief split target goal of current test into two parts (already typed
+    /// and to be typed)
     /// @param left already typed by user
     /// @param right to be typed by user
     void split_goal_to(std::string &left, std::string &right)
     {
-        left = this->results.goal.substr(0, this->results.user_score);
+        left  = this->results.goal.substr(0, this->results.user_score);
         right = this->results.goal.substr(this->results.user_score);
     }
 
@@ -147,13 +151,23 @@ private:
     }
 
     /// @return current test accuracy
-    float get_accuracy() { return this->results.input_count == 0 ? 0.f : (float)this->results.user_score / this->results.input_count; }
+    float get_accuracy()
+    {
+        return this->results.input_count == 0
+                   ? 0.f
+                   : (float)this->results.user_score /
+                         this->results.input_count;
+    }
 
     /// @return current test time in seconds
     float get_time_s() { return this->results.time / 1000.f; }
 
     /// @return current test WPM
-    float get_WPM() { return (this->results.user_score / 5.f) / (this->results.time / 60000.f); }
+    float get_WPM()
+    {
+        return (this->results.user_score / 5.f) /
+               (this->results.time / 60000.f);
+    }
 
     /// @return current test characters amount
     uint16_t get_characters_amount() { return this->results.goal.length(); }
@@ -164,7 +178,7 @@ private:
         std::stringstream ss(this->results.goal);
         std::string word;
         uint16_t count = 0;
-        while (ss >> word)
+        while(ss >> word)
             ++count;
         return count;
     }
@@ -177,10 +191,18 @@ private:
         terminal_jump_to(STATS_START_ROW, STATS_START_COL);
         std::cout << STATS_COLOR;
         print_centered(bottom_top_line, desired_width, '+');
-        print_centered("Accuracy: " + this->format(this->get_accuracy() * 100, 4) + "% ", desired_width);
-        print_centered("Elapsed = " + this->format(this->results.time / 1000.f, 4) + "s ", desired_width);
-        print_centered("WPM = " + this->format(this->get_WPM(), 4) + " ", desired_width);
-        print_centered("Characters:  " + std::to_string(this->results.user_score) + "/" + std::to_string(this->results.goal.length()) + " ", desired_width);
+        print_centered(
+            "Accuracy: " + this->format(this->get_accuracy() * 100, 4) + "% ",
+            desired_width);
+        print_centered(
+            "Elapsed = " + this->format(this->results.time / 1000.f, 4) + "s ",
+            desired_width);
+        print_centered("WPM = " + this->format(this->get_WPM(), 4) + " ",
+                       desired_width);
+        print_centered(
+            "Characters:  " + std::to_string(this->results.user_score) + "/" +
+                std::to_string(this->results.goal.length()) + " ",
+            desired_width);
         print_centered(bottom_top_line, desired_width, '+');
         std::cout << RESET << "\n";
     }
@@ -191,16 +213,17 @@ private:
         std::string left, right;
         split_goal_to(left, right);
         terminal_jump_to(TEXT_START_ROW, TEXT_START_COL);
-        std::cout << "\r" << CORRECT_COLOR << left << INITIAL_COLOR << right << RESET << "\n";
-        if (this->settings["show_stats"] == "1")
-            this->display_stats();
+        std::cout << "\r" << CORRECT_COLOR << left << INITIAL_COLOR << right
+                  << RESET << "\n";
+        if(this->settings["show_stats"] == "1") this->display_stats();
     }
 
     /// @brief display finished test stats
     void display_finish()
     {
         terminal_jump_to(TEXT_START_ROW, TEXT_START_COL);
-        std::cout << "\r" << FINISHED_COLOR << this->results.goal << RESET << std::endl;
+        std::cout << "\r" << FINISHED_COLOR << this->results.goal << RESET
+                  << std::endl;
         display_stats();
     }
 
@@ -216,12 +239,11 @@ private:
     /// @brief load defined default settings into the app
     void load_default_settings()
     {
-        this->settings = {
-            {"mode", "0"},
-            {"no_words", "10"},
-            {"words_filename", "words/words.txt"},
-            {"trailing_cursor", "1"},
-            {"show_stats", "1"}};
+        this->settings = {{"mode", "0"},
+                          {"no_words", "10"},
+                          {"words_filename", "words/words.txt"},
+                          {"trailing_cursor", "1"},
+                          {"show_stats", "1"}};
         this->logger << "loaded default settings";
     }
 
@@ -229,31 +251,31 @@ private:
     void load_settings()
     {
         std::ifstream infile(this->config_filename);
-        if (infile.is_open())
-        {
+        if(infile.is_open()) {
             std::string line, name, value;
-            while (std::getline(infile, line))
-            {
-                std::size_t pos = line.find('=');
-                std::string name = line.substr(0, pos), value = line.substr(pos + 1);
+            while(std::getline(infile, line)) {
+                std::size_t pos   = line.find('=');
+                std::string name  = line.substr(0, pos),
+                            value = line.substr(pos + 1);
 
                 settings[name] = value;
             }
             infile.close();
-            this->logger << "loaded settings from config file " + this->config_filename;
+            this->logger << "loaded settings from config file " +
+                                this->config_filename;
         }
         else
             save_settings(true);
     }
 
     /// @brief save current app settings
-    /// @param default_settings if true restore default settings (defaults to false)
+    /// @param default_settings if true restore default settings (defaults to
+    /// false)
     void save_settings(bool default_settings = false)
     {
-        if (default_settings)
-            this->load_default_settings();
+        if(default_settings) this->load_default_settings();
         std::ofstream outfile(this->config_filename);
-        for (auto const &[name, value] : settings)
+        for(auto const &[name, value] : settings)
             outfile << name << "=" << value << std::endl;
         outfile.close();
         this->settings_changed = false;
@@ -262,64 +284,83 @@ private:
 
     /// @brief menu for options with swichable values (e.g. true/false)
     /// @param setting_name what appears on the option menu
-    /// @param option_name_value possible names and values for given option like {{"ON", "1"}, {"OFF", "0"}}
-    void change_switch_option(std::string setting_name, std::vector<option> option_name_value)
+    /// @param option_name_value possible names and values for given option like
+    /// {{"ON", "1"}, {"OFF", "0"}}
+    void change_switch_option(std::string setting_name,
+                              std::vector<option> option_name_value)
     {
         std::string option_name;
 
         std::stringstream ss;
         ss << DESCRIPTION_COLOR << "Change " << setting_name << " value.\n"
-           << "Note " << OPTION_CONFIG_COLOR << "this color" << RESET << DESCRIPTION_COLOR " means this setting is already chosen\n"
+           << "Note " << OPTION_CONFIG_COLOR << "this color" << RESET
+           << DESCRIPTION_COLOR " means this setting is already chosen\n"
            << "Use arrow LEFT/RIGHT to move around.\n"
            << "Press ENTER to choose a value\n"
            << "Press 'q' to cancel\n"
            << RESET;
         std::string description = ss.str();
 
-        const int16_t row_begin = std::count(description.begin(), description.end(), '\n') + 2, col_begin = 5, col_separate = 10;
+        const int16_t row_begin = std::count(description.begin(),
+                                             description.end(), '\n') +
+                                  2,
+                      col_begin = 5, col_separate = 10;
         uint16_t current_col = col_begin;
-        int16_t move = 0;
+        int16_t move         = 0;
         char key;
 
-        auto is_hovered = [&current_col](uint32_t option_number)
-        { return (col_begin + option_number * col_separate) == current_col; };
+        auto is_hovered = [&current_col](uint32_t option_number) {
+            return (col_begin + option_number * col_separate) == current_col;
+        };
 
         clear_terminal();
-        while (true)
-        {
+        while(true) {
             terminal_jump_to(0, 0);
             std::cout << description;
-            for (uint16_t i = 0; i < option_name_value.size(); i++)
-            {
+            for(uint16_t i = 0; i < option_name_value.size(); i++) {
                 terminal_jump_to(row_begin, col_begin + i * col_separate);
-                if (this->is_from_config(option_name_value[i].value, setting_name) && !is_hovered(i))
-                    std::cout << OPTION_CONFIG_COLOR << option_name_value[i].name << RESET;
-                else
-                {
-                    option_name = is_hovered(i) ? OPTION_PICKED_COLOR + option_name_value[i].name + RESET
-                                                : option_name_value[i].name;
+                if(this->is_from_config(option_name_value[i].value,
+                                        setting_name) &&
+                   !is_hovered(i))
+                    std::cout << OPTION_CONFIG_COLOR
+                              << option_name_value[i].name << RESET;
+                else {
+                    option_name = is_hovered(i)
+                                      ? OPTION_PICKED_COLOR +
+                                            option_name_value[i].name + RESET
+                                      : option_name_value[i].name;
                     std::cout << option_name;
                 }
             }
             terminal_jump_to(row_begin, current_col);
             std::cout.flush();
-            key = get_input();
+            key  = get_input();
             move = handle_left_right_arrow_key(key) * col_separate;
-            if (key == ENTER)
-            {
-                this->settings[setting_name] = option_name_value[((current_col - col_begin) / col_separate)].value;
+            if(key == ENTER) {
+                this->settings[setting_name] =
+                    option_name_value[((current_col - col_begin) /
+                                       col_separate)]
+                        .value;
                 this->settings_changed = true;
-                this->logger << setting_name + " changed to: < " + option_name_value[((current_col - col_begin) / col_separate)].name + " >";
+                this->logger
+                    << setting_name + " changed to: < " +
+                           option_name_value[((current_col - col_begin) /
+                                              col_separate)]
+                               .name +
+                           " >";
                 return;
             }
-            else if (key == GO_BACK_SHORTCUT)
+            else if(key == GO_BACK_SHORTCUT)
                 return;
             else
-                switch_menu_item(move, current_col, col_begin, col_begin + (option_name_value.size() - 1) * col_separate);
+                switch_menu_item(move, current_col, col_begin,
+                                 col_begin + (option_name_value.size() - 1) *
+                                                 col_separate);
         }
     }
 
-    bool is_from_config(const std::string &option_value, const std::string &setting_name)
+    bool is_from_config(const std::string &option_value,
+                        const std::string &setting_name)
     {
         return option_value == this->settings[setting_name];
     }
@@ -330,7 +371,7 @@ private:
     std::vector<std::string> get_filenames_vector(std::string path)
     {
         std::vector<std::string> files;
-        for (const auto &entry : std::filesystem::directory_iterator(path))
+        for(const auto &entry : std::filesystem::directory_iterator(path))
             files.push_back(entry.path().filename());
         return files;
     }
@@ -340,22 +381,24 @@ private:
     /// @return name of first file without the path to it if any exists, else ""
     std::string get_first_file(std::string path)
     {
-        try
-        {
-            return (*std::filesystem::directory_iterator(path)).path().filename();
-        }
-        catch (const std::exception &e)
-        {
+        try {
+            return (*std::filesystem::directory_iterator(path))
+                .path()
+                .filename();
+        } catch(const std::exception &e) {
             return std::string("");
         }
     }
 
-public:
-    /// @brief create Typer app instance with default config file (DEFAULT_CONFIG_FILENAME) or creates one if file with the name doesn't exist
+  public:
+    /// @brief create Typer app instance with default config file
+    /// (DEFAULT_CONFIG_FILENAME) or creates one if file with the name doesn't
+    /// exist
     Typer();
 
     /// @brief create Typer app instance
-    /// @param config_filename file from which settings are loaded (creates the file if it doesn't exist)
+    /// @param config_filename file from which settings are loaded (creates the
+    /// file if it doesn't exist)
     Typer(std::string config_filename);
 
     /// @brief main app menu
@@ -364,7 +407,8 @@ public:
     /// @brief begin typing test with defined goal
     void start_test();
 
-    /// @brief change the test goal or reset the goal to be the same as the previous one
+    /// @brief change the test goal or reset the goal to be the same as the
+    /// previous one
     /// @param goal test text (defaults to ""), when "" resets the goal
     void reset(std::string &&goal = "");
 
