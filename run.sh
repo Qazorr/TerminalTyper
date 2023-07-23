@@ -72,12 +72,12 @@ function usage() {
 # Handle command line arguments
 if [ "$1" == "--rebuild" ]; then
     rebuild
-    shift
+    exit 0
 fi
 
 if [ "$1" == "--build" ]; then
     build
-    shift
+    exit 0
 fi
 
 if [ "$1" == "--format" ]; then
@@ -87,7 +87,7 @@ fi
 
 if [ "$1" == "--no-logs" ]; then
     run "--no-logs"
-    shift
+    exit 0
 fi
 
 if [ "$1" == "--help" ]; then
