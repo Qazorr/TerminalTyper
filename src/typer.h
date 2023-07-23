@@ -6,11 +6,11 @@
 
 #include <cctype>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <map>
-#include <math.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -49,22 +49,22 @@ struct option
     std::string value;
 };
 
-struct terminal_size
+struct terminalSize
 {
     int width, height;
 
-    bool operator==(const terminal_size &other) const
+    bool operator==(const terminalSize &other) const
     {
         return width == other.width && height == other.height;
     }
 
-    bool operator!=(const terminal_size &other) const
+    bool operator!=(const terminalSize &other) const
     {
         return !(*this == other);
     }
 };
 
-struct test_result
+struct testResult
 {
     int64_t time;
     uint32_t user_score;
@@ -98,20 +98,20 @@ int16_t handle_left_right_arrow_key(char key);
 /// @param lower_boundary smallest possible value
 /// @param upper_boundary biggest possible value
 void switch_menu_item(int16_t move, uint16_t &current_pos,
-                      const uint16_t lower_boundary,
-                      const uint16_t upper_boundary);
+                      const uint16_t LOWER_BOUNDARY,
+                      const uint16_t UPPER_BOUNDARY);
 
 /// @brief clear terminal output
 void clear_terminal();
 
-terminal_size get_terminal_size();
+terminalSize get_terminal_size();
 
-void print_centered(const std::string &text, const int desired_size = 30,
-                    const char begin_end_char = '|');
+void print_centered(const std::string &text, const int DESIRED_SIZE = 30,
+                    const char BEGIN_END_CHAR = '|');
 
 class Typer {
   private:
-    test_result results;
+    testResult results;
     std::string config_filename;
     std::map<std::string, std::string> settings;
     bool settings_changed = false;
@@ -186,24 +186,24 @@ class Typer {
     /// @brief display test stats (accuracy, time, WPM)
     void display_stats()
     {
-        const int desired_width = 30;
-        const std::string bottom_top_line(desired_width, '-');
+        const int DESIRED_WIDTH = 30;
+        const std::string BOTTOM_TOP_LINE(DESIRED_WIDTH, '-');
         terminal_jump_to(STATS_START_ROW, STATS_START_COL);
         std::cout << STATS_COLOR;
-        print_centered(bottom_top_line, desired_width, '+');
+        print_centered(BOTTOM_TOP_LINE, DESIRED_WIDTH, '+');
         print_centered(
             "Accuracy: " + this->format(this->get_accuracy() * 100, 4) + "% ",
-            desired_width);
+            DESIRED_WIDTH);
         print_centered(
             "Elapsed = " + this->format(this->results.time / 1000.f, 4) + "s ",
-            desired_width);
+            DESIRED_WIDTH);
         print_centered("WPM = " + this->format(this->get_WPM(), 4) + " ",
-                       desired_width);
+                       DESIRED_WIDTH);
         print_centered(
             "Characters:  " + std::to_string(this->results.user_score) + "/" +
                 std::to_string(this->results.goal.length()) + " ",
-            desired_width);
-        print_centered(bottom_top_line, desired_width, '+');
+            DESIRED_WIDTH);
+        print_centered(BOTTOM_TOP_LINE, DESIRED_WIDTH, '+');
         std::cout << RESET << "\n";
     }
 
@@ -301,16 +301,16 @@ class Typer {
            << RESET;
         std::string description = ss.str();
 
-        const int16_t row_begin = std::count(description.begin(),
+        const int16_t ROW_BEGIN = std::count(description.begin(),
                                              description.end(), '\n') +
                                   2,
-                      col_begin = 5, col_separate = 10;
-        uint16_t current_col = col_begin;
+                      COL_BEGIN = 5, COL_SEPARATE = 10;
+        uint16_t current_col = COL_BEGIN;
         int16_t move         = 0;
         char key;
 
         auto is_hovered = [&current_col](uint32_t option_number) {
-            return (col_begin + option_number * col_separate) == current_col;
+            return (COL_BEGIN + option_number * COL_SEPARATE) == current_col;
         };
 
         clear_terminal();
@@ -318,7 +318,7 @@ class Typer {
             terminal_jump_to(0, 0);
             std::cout << description;
             for(uint16_t i = 0; i < option_name_value.size(); i++) {
-                terminal_jump_to(row_begin, col_begin + i * col_separate);
+                terminal_jump_to(ROW_BEGIN, COL_BEGIN + i * COL_SEPARATE);
                 if(this->is_from_config(option_name_value[i].value,
                                         setting_name) &&
                    !is_hovered(i))
@@ -332,20 +332,20 @@ class Typer {
                     std::cout << option_name;
                 }
             }
-            terminal_jump_to(row_begin, current_col);
+            terminal_jump_to(ROW_BEGIN, current_col);
             std::cout.flush();
             key  = get_input();
-            move = handle_left_right_arrow_key(key) * col_separate;
+            move = handle_left_right_arrow_key(key) * COL_SEPARATE;
             if(key == ENTER) {
                 this->settings[setting_name] =
-                    option_name_value[((current_col - col_begin) /
-                                       col_separate)]
+                    option_name_value[((current_col - COL_BEGIN) /
+                                       COL_SEPARATE)]
                         .value;
                 this->settings_changed = true;
                 this->logger
                     << setting_name + " changed to: < " +
-                           option_name_value[((current_col - col_begin) /
-                                              col_separate)]
+                           option_name_value[((current_col - COL_BEGIN) /
+                                              COL_SEPARATE)]
                                .name +
                            " >";
                 return;
@@ -353,9 +353,9 @@ class Typer {
             else if(key == GO_BACK_SHORTCUT)
                 return;
             else
-                switch_menu_item(move, current_col, col_begin,
-                                 col_begin + (option_name_value.size() - 1) *
-                                                 col_separate);
+                switch_menu_item(move, current_col, COL_BEGIN,
+                                 COL_BEGIN + (option_name_value.size() - 1) *
+                                                 COL_SEPARATE);
         }
     }
 

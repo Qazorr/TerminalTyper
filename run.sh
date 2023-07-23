@@ -17,6 +17,15 @@ function rebuild() {
     build
 }
 
+function tidy() {
+    rm -rf $BUILD_DIR
+    mkdir -p $BUILD_DIR
+    cd $BUILD_DIR || exit
+    cmake -DENABLE_CLANG_TIDY=ON ..
+    make
+    cd ..  
+}
+
 function run() {
     if [ -d "$BUILD_DIR" ]; then
         cd $BUILD_DIR || exit
@@ -70,13 +79,18 @@ function usage() {
 }
 
 # Handle command line arguments
+if [ "$1" == "--build" ]; then
+    build
+    exit 0
+fi
+
 if [ "$1" == "--rebuild" ]; then
     rebuild
     exit 0
 fi
 
-if [ "$1" == "--build" ]; then
-    build
+if [ "$1" == "--tidy" ]; then
+    tidy
     exit 0
 fi
 

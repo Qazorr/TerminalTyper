@@ -1,7 +1,9 @@
 #include "logger.h"
 
+#include <utility>
+
 Logger::Logger(std::string log_filename, std::string filename)
-    : filename(filename)
+    : filename(std::move(filename))
 {
     std::string dir_path = "logs";
     if(!std::filesystem::exists(dir_path)) {
