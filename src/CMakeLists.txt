@@ -1,1 +1,0 @@
-add_library(TerminalTyperLib typer.cpp generator.cpp logger.cpp)
